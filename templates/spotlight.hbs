@@ -1,0 +1,176 @@
+<div class="ctm-shell">
+  <section class="ctm-stage" aria-live="polite">
+    {{#if isOpen}}
+      <div class="ctm-countdown" data-countdown-ring style="--ctm-progress: {{progressPercent}}%;">
+        <div class="ctm-countdown-inner">
+          <strong data-countdown-number>{{remainingSeconds}}</strong>
+          <span>{{localize "CTM.Status.Seconds"}}</span>
+        </div>
+      </div>
+      <div class="ctm-stage-copy">
+        <p class="ctm-stage-kicker">{{localize "CTM.Status.OpenKicker"}}</p>
+        <h2>{{localize "CTM.Status.Open"}}</h2>
+        <p>{{localize "CTM.Status.OpenHint"}}</p>
+      </div>
+      <div class="ctm-progress-track" aria-hidden="true">
+        <span data-countdown-bar style="width: {{progressPercent}}%;"></span>
+      </div>
+    {{else}}
+      {{#if hasWinner}}
+        <div class="ctm-winner-mark {{#if winnerIsGM}}is-gm{{/if}}" aria-hidden="true">
+          {{#if winnerImage}}
+            <img class="ctm-winner-avatar" src="{{winnerImage}}" alt="">
+          {{else}}
+            <span>{{winnerInitial}}</span>
+          {{/if}}
+        </div>
+        <div class="ctm-stage-copy">
+          <p class="ctm-stage-kicker">{{localize "CTM.Status.SpotlightOn"}}</p>
+          <h2>{{winnerName}}</h2>
+          {{#if wasTakenByGM}}
+            <p>{{localize "CTM.Status.GMTakenWinner"}}</p>
+          {{else}}
+            {{#if wasAutomatic}}
+              <p>{{localize "CTM.Status.AutomaticWinner"}}</p>
+            {{else}}
+              <p>{{localize "CTM.Status.ClaimedWinner"}}</p>
+            {{/if}}
+          {{/if}}
+        </div>
+      {{else}}
+        {{#if isCancelled}}
+          <div class="ctm-resting-mark" aria-hidden="true"><i class="fa-solid fa-user-slash"></i></div>
+          <div class="ctm-stage-copy">
+            <p class="ctm-stage-kicker">{{localize "CTM.Status.RoundEnded"}}</p>
+            <h2>{{localize "CTM.Status.NoWinner"}}</h2>
+            <p>{{localize "CTM.Status.NoWinnerHint"}}</p>
+          </div>
+        {{else}}
+          <div class="ctm-resting-mark" aria-hidden="true"><i class="fa-regular fa-moon"></i></div>
+          <div class="ctm-stage-copy">
+            <p class="ctm-stage-kicker">{{localize "CTM.Status.ReadyKicker"}}</p>
+            <h2>{{localize "CTM.Status.Ready"}}</h2>
+            <p>{{localize "CTM.Status.ReadyHint"}}</p>
+          </div>
+        {{/if}}
+      {{/if}}
+    {{/if}}
+  </section>
+
+  <section class="ctm-actions">
+    {{#if isGM}}
+      <div class="ctm-gm-action-grid">
+        <button type="button" class="ctm-primary-action" data-action="throwSpotlight" {{#unless canThrow}}disabled{{/unless}}>
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          {{#if isOpen}}
+            {{localize "CTM.Actions.CountdownInProgress"}}
+          {{else}}
+            {{localize "CTM.Actions.ThrowSpotlight"}}
+          {{/if}}
+        </button>
+        <button type="button" class="ctm-primary-action ctm-take-action" data-action="takeSpotlight" {{#unless canTake}}disabled{{/unless}}>
+          <i class="fa-solid fa-clapperboard" aria-hidden="true"></i>
+          {{localize "CTM.Actions.TakeSpotlight"}}
+        </button>
+      </div>
+      <p class="ctm-action-hint">{{localize "CTM.Actions.GMActionHint"}}</p>
+    {{else}}
+      <button type="button" class="ctm-primary-action ctm-claim-action" data-action="claimSpotlight" data-round-id="{{roundId}}" {{#unless canClaim}}disabled{{/unless}}>
+        <i class="fa-solid fa-hand" aria-hidden="true"></i>
+        {{localize claimLabel}}
+      </button>
+      <p class="ctm-action-hint">{{localize "CTM.Actions.ClaimHint"}}</p>
+    {{/if}}
+    <div class="ctm-audio-preference">
+      <button type="button" class="ctm-secondary-action ctm-mute-action {{#if soundsMuted}}is-muted{{/if}}" data-action="toggleSounds" aria-pressed="{{#if soundsMuted}}true{{else}}false{{/if}}">
+        {{#if soundsMuted}}
+          <i class="fa-solid fa-volume-xmark" aria-hidden="true"></i>
+          {{localize "CTM.Actions.UnmuteSounds"}}
+        {{else}}
+          <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+          {{localize "CTM.Actions.MuteSounds"}}
+        {{/if}}
+      </button>
+      <span>{{localize "CTM.Actions.SoundPreferenceHint"}}</span>
+    </div>
+  </section>
+
+  <section class="ctm-roster" aria-labelledby="ctm-roster-heading">
+    <div class="ctm-section-heading">
+      <div>
+        <p class="ctm-eyebrow">{{localize "CTM.Roster.Eyebrow"}}</p>
+        <h2 id="ctm-roster-heading">{{localize "CTM.Roster.Title"}}</h2>
+      </div>
+      <span class="ctm-online-count">
+        <i class="fa-solid fa-signal" aria-hidden="true"></i>
+        {{players.length}} {{localize "CTM.Roster.Online"}}
+      </span>
+    </div>
+
+    {{#if hasPlayers}}
+      <div class="ctm-player-list">
+        <div class="ctm-player-header" aria-hidden="true">
+          <span>{{localize "CTM.Roster.In"}}</span>
+          <span>{{localize "CTM.Roster.Player"}}</span>
+          <span>{{localize "CTM.Roster.Claims"}}</span>
+        </div>
+        {{#each players}}
+          <div class="ctm-player-row {{#unless eligible}}is-ineligible{{/unless}}">
+            <div class="ctm-contention-cell">
+              {{#if ../isGM}}
+                <label class="ctm-toggle" data-tooltip="{{localize "CTM.Roster.ToggleTooltip"}}">
+                  <input type="checkbox" data-action="toggleEligibility" data-eligible-user="{{id}}" {{#if eligible}}checked{{/if}}>
+                  <span class="ctm-toggle-track" aria-hidden="true"><span></span></span>
+                  <span class="ctm-sr-only">{{localize "CTM.Roster.Toggle"}}</span>
+                </label>
+              {{else}}
+                <span class="ctm-contention-status" data-tooltip="{{#if eligible}}{{localize "CTM.Roster.InContention"}}{{else}}{{localize "CTM.Roster.OutOfContention"}}{{/if}}">
+                  {{#if eligible}}
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    <span class="ctm-sr-only">{{localize "CTM.Roster.InContention"}}</span>
+                  {{else}}
+                    <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                    <span class="ctm-sr-only">{{localize "CTM.Roster.OutOfContention"}}</span>
+                  {{/if}}
+                </span>
+              {{/if}}
+            </div>
+            <div class="ctm-player-identity">
+              {{#if image}}
+                <img class="ctm-avatar" src="{{image}}" alt="">
+              {{else}}
+                <span class="ctm-avatar" aria-hidden="true">{{initial}}</span>
+              {{/if}}
+              <span class="ctm-player-name">{{name}}</span>
+            </div>
+            <div class="ctm-count-cell">
+              {{#if ../isGM}}
+                <input class="ctm-count-input" type="number" min="0" step="1" name="count.{{id}}" value="{{count}}" data-count-user="{{id}}" aria-label="{{localize "CTM.Roster.Claims"}}">
+              {{else}}
+                <strong class="ctm-count-pill">{{count}}</strong>
+              {{/if}}
+            </div>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <div class="ctm-empty-roster">
+        <i class="fa-solid fa-users-slash" aria-hidden="true"></i>
+        <p>{{localize "CTM.Roster.Empty"}}</p>
+      </div>
+    {{/if}}
+  </section>
+
+  {{#if isGM}}
+    <footer class="ctm-gm-tools">
+      <div>
+        <strong>{{localize "CTM.GMTools.Title"}}</strong>
+        <span>{{localize "CTM.GMTools.Hint"}}</span>
+      </div>
+      <button type="button" class="ctm-secondary-action" data-action="resetCounts">
+        <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+        {{localize "CTM.Actions.ResetCounts"}}
+      </button>
+    </footer>
+  {{/if}}
+</div>

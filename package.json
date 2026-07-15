@@ -1,0 +1,14 @@
+{
+  "name": "claim-the-moment",
+  "version": "0.5.6",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check scripts/claim-the-moment.mjs && node --check scripts/spotlight-app.mjs && node --check scripts/spotlight-controller.mjs && node --check scripts/state.mjs",
+    "package": "bash tools/package-release.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

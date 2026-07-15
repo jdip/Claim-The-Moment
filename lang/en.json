@@ -1,0 +1,122 @@
+{
+  "CTM": {
+    "Window": {
+      "Title": "Claim the Moment"
+    },
+    "Controls": {
+      "Open": "Open Claim the Moment"
+    },
+    "Settings": {
+      "State": {
+        "Name": "Spotlight State",
+        "Hint": "Persistent shared state for Claim the Moment."
+      },
+      "Countdown": {
+        "Name": "Spotlight Countdown",
+        "Hint": "How many seconds players have to claim the spotlight before it is assigned automatically."
+      },
+      "SoundEnabled": {
+        "Name": "Play Throw Alert",
+        "Hint": "Play the shared cinematic alert for everyone when the GM throws the spotlight."
+      },
+      "SoundPath": {
+        "Name": "Throw Alert Sound",
+        "Hint": "Choose or upload the audio file played when the spotlight is thrown."
+      },
+      "PlayerClaimSoundEnabled": {
+        "Name": "Play Player Claim Horn",
+        "Hint": "Play a shared heroic horn when a player claims the spotlight before time expires."
+      },
+      "PlayerClaimSoundPath": {
+        "Name": "Player Claim Horn",
+        "Hint": "Choose or upload the heroic audio file played when a player claims the spotlight."
+      },
+      "AutoSelectSoundEnabled": {
+        "Name": "Play Automatic Selection Cue",
+        "Hint": "Play a shared cue when the countdown expires and the system selects a player automatically."
+      },
+      "AutoSelectSoundPath": {
+        "Name": "Automatic Selection Cue",
+        "Hint": "Choose or upload the audio file played when the system automatically selects a player."
+      },
+      "GMTakeSoundEnabled": {
+        "Name": "Play GM Danger Horn",
+        "Hint": "Play a shared foreboding horn when the GM takes the spotlight."
+      },
+      "GMTakeSoundPath": {
+        "Name": "GM Danger Horn",
+        "Hint": "Choose or upload the danger audio file played when the GM takes the spotlight."
+      },
+      "GMIcon": {
+        "Name": "GM Spotlight Icon",
+        "Hint": "Choose or upload the image shown when the GM takes the spotlight."
+      },
+      "MuteSounds": {
+        "Name": "Mute Claim the Moment Sounds",
+        "Hint": "Your personal mute preference for this world."
+      }
+    },
+    "Status": {
+      "Seconds": "seconds",
+      "OpenKicker": "The moment is open",
+      "Open": "Who will claim it?",
+      "OpenHint": "The first eligible player to claim wins the spotlight.",
+      "SpotlightOn": "The spotlight is on",
+      "AutomaticWinner": "No one claimed in time, so the fairest next player was selected.",
+      "ClaimedWinner": "They reached for the moment first.",
+      "GMTakenWinner": "The GM has taken the spotlight to move the scene forward.",
+      "ReadyKicker": "Ready when you are",
+      "Ready": "The spotlight is resting",
+      "ReadyHint": "The GM can throw it to the table when the next moment opens.",
+      "RoundEnded": "The moment passed",
+      "NoWinner": "No eligible player remained",
+      "NoWinnerHint": "Bring at least one online player into contention, then throw again."
+    },
+    "Actions": {
+      "ThrowSpotlight": "Throw the Spotlight",
+      "CountdownInProgress": "Countdown in Progress",
+      "ThrowHint": "Players' windows open automatically when the countdown begins.",
+      "TakeSpotlight": "Take the Spotlight",
+      "GMActionHint": "Throw it to the players, or take it immediately to move the scene forward.",
+      "ClaimSpotlight": "Claim the Spotlight",
+      "WaitingForThrow": "Waiting for the GM",
+      "NotInContention": "Not in Contention",
+      "ClaimHint": "Only the first eligible claim is counted.",
+      "MuteSounds": "Mute Sounds",
+      "UnmuteSounds": "Unmute Sounds",
+      "SoundPreferenceHint": "Only affects you and persists for this world.",
+      "ResetCounts": "Reset All"
+    },
+    "Roster": {
+      "Eyebrow": "At the table",
+      "Title": "Online Players",
+      "Online": "online",
+      "In": "In?",
+      "Player": "Player",
+      "Claims": "Claims",
+      "Toggle": "Toggle spotlight contention",
+      "ToggleTooltip": "Include or exclude this player from the spotlight",
+      "InContention": "In contention",
+      "OutOfContention": "Out of contention",
+      "Empty": "No players are currently online."
+    },
+    "GMTools": {
+      "Title": "GM controls",
+      "Hint": "Set contention, edit a total directly, or reset every player to zero."
+    },
+    "Reset": {
+      "Title": "Reset Spotlight Claims",
+      "Confirm": "Reset every player's spotlight claim total to zero? This cannot be undone."
+    },
+    "Notifications": {
+      "GMRequired": "An active GM is required to manage the spotlight.",
+      "NoEligiblePlayers": "At least one eligible player must be online before throwing the spotlight.",
+      "NoEligibleAtDeadline": "The countdown ended with no eligible players online.",
+      "Awarded": "The spotlight belongs to {name}.",
+      "OperationFailed": "Claim the Moment could not complete that action. Check the console for details."
+    },
+    "Player": {
+      "Unknown": "Unknown Player"
+    }
+  }
+}

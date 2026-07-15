@@ -1,0 +1,48 @@
+{
+  "id": "claim-the-moment",
+  "title": "Claim the Moment",
+  "description": "A collaborative spotlight manager for Daggerheart. The GM throws the spotlight, players race to claim it, and a fair least-served fallback keeps the story moving.",
+  "version": "0.5.6",
+  "authors": [
+    {
+      "name": "jdip"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14.364",
+    "verified": "14.364",
+    "maximum": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "daggerheart",
+        "type": "system",
+        "manifest": "https://raw.githubusercontent.com/Foundryborne/daggerheart/v14/system.json",
+        "compatibility": {
+          "minimum": "2.5.4",
+          "verified": "2.5.4"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/claim-the-moment.mjs"
+  ],
+  "styles": [
+    "styles/claim-the-moment.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": true,
+  "url": "https://github.com/jdip/Claim-The-Moment",
+  "manifest": "https://github.com/jdip/Claim-The-Moment/releases/latest/download/module.json",
+  "download": "https://github.com/jdip/Claim-The-Moment/releases/latest/download/claim-the-moment.zip",
+  "readme": "https://github.com/jdip/Claim-The-Moment/blob/main/README.md",
+  "license": "https://github.com/jdip/Claim-The-Moment/blob/main/LICENSE"
+}
