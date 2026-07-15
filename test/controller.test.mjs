@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   AUTO_SELECT_SOUND_ENABLED_SETTING,
   AUTO_SELECT_SOUND_PATH_SETTING,
+  AWARD_REASON,
   COUNTDOWN_SETTING,
   DEFAULT_ALERT_SOUND_PATH,
   DEFAULT_AUTO_SELECT_SOUND_PATH,
@@ -21,6 +22,7 @@ import {
   ROUND_STATUS,
   SOUND_ENABLED_SETTING,
   SOUND_PATH_SETTING,
+  SOUND_VOLUME_SETTING,
   SOCKET_NAME,
   STATE_SETTING
 } from "../scripts/constants.mjs";
@@ -95,7 +97,8 @@ function createHarness(initialState = createInitialState(), {
   gmTakeSoundEnabled = true,
   gmTakeSoundPath = DEFAULT_GM_TAKE_SOUND_PATH,
   gmIconPath = DEFAULT_GM_ICON_PATH,
-  soundsMuted = false
+  soundsMuted = false,
+  soundVolume = 80
 } = {}) {
   const createUser = (data) => ({
     ...data,
@@ -118,6 +121,7 @@ function createHarness(initialState = createInitialState(), {
   let cachedState = initialState;
   let savedState = initialState;
   let savedSoundsMuted = soundsMuted;
+  let savedSoundVolume = soundVolume;
   let serverTime = 1_000;
   const emitted = [];
   const playedSounds = [];
@@ -153,6 +157,7 @@ function createHarness(initialState = createInitialState(), {
         if (key === GM_TAKE_SOUND_PATH_SETTING) return gmTakeSoundPath;
         if (key === GM_ICON_SETTING) return gmIconPath;
         if (key === MUTE_SOUNDS_SETTING) return savedSoundsMuted;
+        if (key === SOUND_VOLUME_SETTING) return savedSoundVolume;
         throw new Error(`Unknown setting ${key}`);
       },
       set: async (namespace, key, value) => {
@@ -160,6 +165,10 @@ function createHarness(initialState = createInitialState(), {
         if (key === MUTE_SOUNDS_SETTING) {
           savedSoundsMuted = value === true;
           return savedSoundsMuted;
+        }
+        if (key === SOUND_VOLUME_SETTING) {
+          savedSoundVolume = value;
+          return savedSoundVolume;
         }
         assert.equal(key, STATE_SETTING);
         if (deferSettingWrite) await settingWriteGate;
@@ -190,6 +199,9 @@ function createHarness(initialState = createInitialState(), {
     },
     get soundsMuted() {
       return savedSoundsMuted;
+    },
+    get soundVolume() {
+      return savedSoundVolume;
     },
     set serverTime(value) {
       serverTime = value;
@@ -359,17 +371,35 @@ test("the registered ApplicationV2 toggle action persists the unchecked state", 
   assert.equal(target.disabled, true, "the setting update rerenders the row instead of reusing the clicked input");
 });
 
-test("the window mute action persists a personal user preference", async () => {
-  const harness = createHarness();
+test("a legacy mute preference migrates to zero module volume", async () => {
+  const harness = createHarness(createInitialState(), { soundsMuted: true, soundVolume: 80 });
   const controller = new SpotlightController();
-  const target = { disabled: false, isConnected: true };
 
-  const toggleAction = SpotlightApp.DEFAULT_OPTIONS.actions.toggleSounds;
-  await toggleAction.call(controller.app, {}, target);
+  assert.equal(await controller._migrateLegacyMute(), true);
 
-  assert.equal(harness.soundsMuted, true);
-  assert.equal(controller.soundsMuted, true);
-  assert.equal((await controller.app._prepareContext({})).soundsMuted, true);
+  assert.equal(harness.soundsMuted, false);
+  assert.equal(harness.soundVolume, 0);
+  assert.equal(controller.soundVolume, 0);
+});
+
+test("the streamlined sound widget persists a personal module volume", async () => {
+  const harness = createHarness(createInitialState(), { soundVolume: 65 });
+  const controller = new SpotlightController();
+  const target = {
+    value: "37.6",
+    dataset: { soundVolume: "" }
+  };
+
+  assert.equal((await controller.app._prepareContext({})).soundVolumePercent, 65);
+
+  const formHandler = SpotlightApp.DEFAULT_OPTIONS.form.handler;
+  const updated = await formHandler.call(controller.app, { target }, {}, {});
+
+  assert.equal(updated, true);
+  assert.equal(harness.soundVolume, 38);
+  assert.equal(controller.soundVolumePercent, 38);
+  assert.equal(controller.soundVolume, 0.38);
+  assert.equal(target.value, "38");
 });
 
 test("the registered ApplicationV2 form handler persists a manual claim-count edit", async () => {
@@ -510,6 +540,64 @@ test("the GM can take the spotlight during an open countdown without adding a pl
   assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_GM_TAKE_SOUND_PATH);
 });
 
+test("the GM can hand the spotlight directly to an eligible player", async () => {
+  const harness = createHarness();
+  const controller = new SpotlightController();
+  await controller._processRequest({ command: REQUEST.START, senderId: harness.gm.id });
+
+  const result = await controller._processRequest({
+    command: REQUEST.HAND_SPOTLIGHT,
+    senderId: harness.gm.id,
+    userId: harness.ada.id
+  });
+
+  assert.equal(result, true);
+  assert.equal(harness.state.round.status, ROUND_STATUS.AWARDED);
+  assert.equal(harness.state.round.reason, AWARD_REASON.HANDOFF);
+  assert.equal(harness.state.round.winnerId, harness.ada.id);
+  assert.equal(harness.state.counts.ada, 1);
+  assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+});
+
+test("direct spotlight handoff requires an eligible online player and a GM sender", async () => {
+  const excludedState = setPlayerEligibility(createInitialState(), "ada", false);
+  const harness = createHarness(excludedState);
+  const controller = new SpotlightController();
+
+  assert.equal(await controller._processRequest({
+    command: REQUEST.HAND_SPOTLIGHT,
+    senderId: harness.gm.id,
+    userId: harness.ada.id
+  }), false);
+
+  assert.equal(await controller._processRequest({
+    command: REQUEST.HAND_SPOTLIGHT,
+    senderId: harness.bea.id,
+    userId: harness.bea.id
+  }), false);
+  assert.equal(harness.state.round.status, ROUND_STATUS.IDLE);
+  assert.deepEqual(harness.state.counts, {});
+});
+
+test("the registered GM handoff action routes the selected player id", async () => {
+  const harness = createHarness();
+  const controller = new SpotlightController();
+  const target = {
+    dataset: { playerId: harness.ada.id },
+    disabled: false,
+    isConnected: true,
+    setAttribute() {},
+    removeAttribute() {}
+  };
+
+  const handoffAction = SpotlightApp.DEFAULT_OPTIONS.actions.handSpotlight;
+  await handoffAction.call(controller.app, {}, target);
+
+  assert.equal(harness.state.round.reason, AWARD_REASON.HANDOFF);
+  assert.equal(harness.state.round.winnerId, harness.ada.id);
+  assert.equal(target.disabled, true);
+});
+
 test("assigned character identity uses the character name and prototype-token art", () => {
   const harness = createHarness();
   harness.ada.character = {
@@ -645,8 +733,8 @@ test("the player claim horn starts before the world Setting write finishes", asy
   assert.equal(await claim, true);
 });
 
-test("a muted GM still broadcasts configured cues without hearing them locally", async () => {
-  const harness = createHarness(createInitialState(), { soundsMuted: true });
+test("a zero-volume GM still broadcasts configured cues without hearing them locally", async () => {
+  const harness = createHarness(createInitialState(), { soundVolume: 0 });
   const controller = new SpotlightController();
 
   assert.equal(await controller._processRequest({
@@ -660,8 +748,8 @@ test("a muted GM still broadcasts configured cues without hearing them locally",
   assert.equal(harness.emitted[0].message.src, DEFAULT_ALERT_SOUND_PATH);
 });
 
-test("a muted player suppresses received Claim the Moment cues", () => {
-  const harness = createHarness(createInitialState(), { soundsMuted: true });
+test("a zero-volume player suppresses received Claim the Moment cues", () => {
+  const harness = createHarness(createInitialState(), { soundVolume: 0 });
   game.user = harness.ada;
   const controller = new SpotlightController();
 
@@ -677,8 +765,8 @@ test("a muted player suppresses received Claim the Moment cues", () => {
   assert.equal(harness.playedSounds.length, 0);
 });
 
-test("an unmuted player plays a received Claim the Moment cue locally only", () => {
-  const harness = createHarness();
+test("a positive-volume player plays a received Claim the Moment cue locally only", () => {
+  const harness = createHarness(createInitialState(), { soundVolume: 35 });
   game.user = harness.ada;
   const controller = new SpotlightController();
 
@@ -693,6 +781,7 @@ test("an unmuted player plays a received Claim the Moment cue locally only", () 
 
   assert.equal(harness.playedSounds.length, 1);
   assert.equal(harness.playedSounds[0].data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+  assert.equal(harness.playedSounds[0].data.volume, 0.35);
   assert.equal(harness.playedSounds[0].socketOptions, false);
 });
 

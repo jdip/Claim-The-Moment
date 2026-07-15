@@ -11,6 +11,7 @@ The GM throws the spotlight to the table, starting a synchronized countdown. The
 - A shared window listing every currently online, non-GM player and their spotlight total.
 - A GM-only **Throw the Spotlight** control with a configurable 3–60 second countdown.
 - A GM-only **Take the Spotlight** control which immediately ends any open countdown and returns focus to the GM.
+- A GM-only handoff control on every eligible player which immediately awards them the spotlight.
 - First-click wins, with claim processing serialized by one elected GM client to avoid double winners.
 - Automatic least-served selection when the countdown expires, with random tie-breaking.
 - The player who held the spotlight immediately before a new throw is excluded from that round's automatic fallback, while remaining free to claim manually.
@@ -22,7 +23,7 @@ The GM throws the spotlight to the table, starting a synchronized countdown. The
 - Automatic window opening for the GM and eligible connected players whenever a new countdown begins; excluded players are not interrupted.
 - Four shared cues: a cinematic BRAAAM when the spotlight is thrown, a heroic horn for player claims, a flourish for automatic selection, and a scary string sting when the GM takes it.
 - Independent on/off toggles and Foundry file pickers for replacing each sound.
-- A per-user mute control in the spotlight window which persists independently for that user in the world.
+- A compact per-user volume control in the spotlight window which affects only Claim the Moment and persists in the world.
 - A Token Controls button for reopening the window at any time.
 
 ## Compatibility
@@ -54,7 +55,7 @@ Enable **Claim the Moment** from **Manage Modules** in a Daggerheart world, then
 
 The countdown length, all four sound toggles and files, and the GM spotlight icon are available under **Configure Settings → Module Settings → Claim the Moment**. The audio and image fields open Foundry's file picker, where the GM can browse or upload a replacement.
 
-Every user can mute or unmute Claim the Moment from inside the spotlight window. This preference is stored separately for each user in the current world and follows that user across browsers and devices.
+Every user can open the sound control inside the spotlight window to adjust Claim the Moment's volume, including taking it to zero. This preference affects only this module, is stored separately for each user in the current world, and follows that user across browsers and devices.
 
 Only online, non-GM users can claim or be selected automatically. If every eligible player disconnects or is excluded during an open countdown, that round ends without a winner.
 
@@ -67,6 +68,7 @@ const api = game.modules.get("claim-the-moment").api;
 api.open();
 await api.throwSpotlight(); // GM only
 await api.takeSpotlight(); // GM only
+await api.handSpotlight("PLAYER_USER_ID"); // GM only
 console.log(api.getState());
 ```
 

@@ -54,6 +54,10 @@
       "MuteSounds": {
         "Name": "Mute Claim the Moment Sounds",
         "Hint": "Your personal mute preference for this world."
+      },
+      "SoundVolume": {
+        "Name": "Claim the Moment Volume",
+        "Hint": "Your personal Claim the Moment playback volume for this world."
       }
     },
     "Status": {
@@ -63,6 +67,7 @@
       "OpenHint": "The first eligible player to claim wins the spotlight.",
       "SpotlightOn": "The spotlight is on",
       "AutomaticWinner": "No one claimed in time, so the fairest next player was selected.",
+      "HandedWinner": "The GM handed them the moment directly.",
       "ClaimedWinner": "They reached for the moment first.",
       "GMTakenWinner": "The GM has taken the spotlight to move the scene forward.",
       "ReadyKicker": "Ready when you are",
@@ -82,9 +87,8 @@
       "WaitingForThrow": "Waiting for the GM",
       "NotInContention": "Not in Contention",
       "ClaimHint": "Only the first eligible claim is counted.",
-      "MuteSounds": "Mute Sounds",
-      "UnmuteSounds": "Unmute Sounds",
-      "SoundPreferenceHint": "Only affects you and persists for this world.",
+      "SoundControls": "Claim the Moment sound controls",
+      "SoundVolume": "Claim the Moment volume",
       "ResetCounts": "Reset All"
     },
     "Roster": {
@@ -94,6 +98,8 @@
       "In": "In?",
       "Player": "Player",
       "Claims": "Claims",
+      "Hand": "Give",
+      "HandSpotlight": "Hand the spotlight directly to this player",
       "Toggle": "Toggle spotlight contention",
       "ToggleTooltip": "Include or exclude this player from the spotlight",
       "InContention": "In contention",

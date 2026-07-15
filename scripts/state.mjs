@@ -132,7 +132,9 @@ export function startRound(state, { roundId, startedAt, durationMs }) {
   const safeStartedAt = finiteNumberOrNull(startedAt) ?? Date.now();
   const safeDuration = Math.max(0, finiteNumberOrNull(durationMs) ?? 0);
   const priorPlayerWinner = current.round.status === ROUND_STATUS.AWARDED
-    && (current.round.reason === AWARD_REASON.CLAIM || current.round.reason === AWARD_REASON.AUTOMATIC)
+    && (current.round.reason === AWARD_REASON.CLAIM
+      || current.round.reason === AWARD_REASON.AUTOMATIC
+      || current.round.reason === AWARD_REASON.HANDOFF)
     ? current.round.winnerId
     : null;
   return withRevision(current, {
@@ -184,6 +186,29 @@ export function takeSpotlight(state, { roundId, winnerId, winnerName, awardedAt 
       winnerId: String(winnerId),
       winnerName: String(winnerName),
       reason: AWARD_REASON.GM,
+      awardedAt: finiteNumberOrNull(awardedAt) ?? Date.now(),
+      fallbackExcludedUserId: null
+    }
+  });
+}
+
+export function handSpotlight(state, { roundId, winnerId, winnerName, awardedAt }) {
+  const current = normalizeState(state);
+  const counts = {
+    ...current.counts,
+    [winnerId]: getPlayerCount(current, winnerId) + 1
+  };
+
+  return withRevision(current, {
+    counts,
+    round: {
+      id: String(roundId),
+      status: ROUND_STATUS.AWARDED,
+      startedAt: null,
+      endsAt: null,
+      winnerId: String(winnerId),
+      winnerName: String(winnerName),
+      reason: AWARD_REASON.HANDOFF,
       awardedAt: finiteNumberOrNull(awardedAt) ?? Date.now(),
       fallbackExcludedUserId: null
     }

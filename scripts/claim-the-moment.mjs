@@ -16,6 +16,7 @@ import {
   PLAYER_CLAIM_SOUND_PATH_SETTING,
   SOUND_ENABLED_SETTING,
   SOUND_PATH_SETTING,
+  SOUND_VOLUME_SETTING,
   STATE_SETTING
 } from "./constants.mjs";
 import { createInitialState } from "./state.mjs";
@@ -159,8 +160,22 @@ Hooks.once("init", () => {
     scope: "user",
     config: false,
     type: Boolean,
-    default: false,
-    onChange: () => controller?.onSoundMuteChanged()
+    default: false
+  });
+
+  game.settings.register(MODULE_ID, SOUND_VOLUME_SETTING, {
+    name: "CTM.Settings.SoundVolume.Name",
+    hint: "CTM.Settings.SoundVolume.Hint",
+    scope: "user",
+    config: false,
+    type: Number,
+    default: 80,
+    range: {
+      min: 0,
+      max: 100,
+      step: 5
+    },
+    onChange: () => controller?.onSoundVolumeChanged()
   });
 });
 
@@ -173,13 +188,14 @@ Hooks.once("setup", () => {
       open: () => controller.openWindow(),
       throwSpotlight: () => controller.requestStart(),
       takeSpotlight: () => controller.requestTake(),
+      handSpotlight: (userId) => controller.requestHandSpotlight(userId),
       getState: () => controller.state
     };
   }
 });
 
-Hooks.once("ready", () => {
-  controller.initialize();
+Hooks.once("ready", async () => {
+  await controller.initialize();
   console.info(`${MODULE_ID} | Ready for Foundry ${game.version} and ${game.system.id} ${game.system.version}`);
 });
 

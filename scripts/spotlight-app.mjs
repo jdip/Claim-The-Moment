@@ -33,8 +33,8 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       throwSpotlight: SpotlightApp.onThrowSpotlight,
       takeSpotlight: SpotlightApp.onTakeSpotlight,
       claimSpotlight: SpotlightApp.onClaimSpotlight,
+      handSpotlight: SpotlightApp.onHandSpotlight,
       toggleEligibility: SpotlightApp.onToggleEligibility,
-      toggleSounds: SpotlightApp.onToggleSounds,
       resetCounts: SpotlightApp.onResetCounts
     }
   };
@@ -93,11 +93,13 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       winnerInitial: winner?.initial,
       winnerIsGM: winner?.isGM === true,
       wasAutomatic: round.reason === AWARD_REASON.AUTOMATIC,
+      wasHandedByGM: round.reason === AWARD_REASON.HANDOFF,
       wasTakenByGM: round.reason === AWARD_REASON.GM,
       remainingSeconds: Math.ceil(remaining / 1000),
       progressPercent: Math.round((remaining / duration) * 100),
       roundId: round.id,
-      soundsMuted: this.controller.soundsMuted,
+      soundVolumePercent: this.controller.soundVolumePercent,
+      soundVolumeZero: this.controller.soundVolumePercent === 0,
       canClaim,
       claimLabel,
       canThrow: isGM && !isOpen && eligibleCount > 0,
@@ -173,6 +175,16 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  static async onHandSpotlight(_event, target) {
+    target.disabled = true;
+    target.setAttribute("aria-busy", "true");
+    const handed = await this.controller.requestHandSpotlight(target.dataset.playerId);
+    if (!handed && target.isConnected) {
+      target.disabled = false;
+      target.removeAttribute("aria-busy");
+    }
+  }
+
   static async onToggleEligibility(_event, target) {
     const included = target.checked;
     target.disabled = true;
@@ -183,15 +195,20 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  static async onToggleSounds(_event, target) {
-    const muted = !this.controller.soundsMuted;
-    target.disabled = true;
-    const updated = await this.controller.setSoundsMuted(muted);
-    if (!updated && target.isConnected) target.disabled = false;
-  }
-
   static async onSubmitForm(event, _form, _formData) {
     const target = event.target;
+
+    if (target?.dataset && "soundVolume" in target.dataset) {
+      const parsed = Number(target.value);
+      const volume = Number.isFinite(parsed)
+        ? Math.max(0, Math.min(100, Math.round(parsed)))
+        : 80;
+      target.value = String(volume);
+      const output = this.element?.querySelector?.("[data-volume-output]");
+      if (output) output.textContent = `${volume}%`;
+      return this.controller.setSoundVolume(volume);
+    }
+
     const userId = target?.dataset?.countUser;
     if (!userId) return false;
 

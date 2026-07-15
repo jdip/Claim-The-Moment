@@ -7,6 +7,7 @@ import {
   chooseFallbackWinner,
   createInitialState,
   getPlayerCount,
+  handSpotlight,
   isPlayerEligible,
   normalizeState,
   resetPlayerCounts,
@@ -88,6 +89,31 @@ test("a new round does not exclude a prior GM spotlight holder", () => {
   });
 
   assert.equal(next.round.fallbackExcludedUserId, null);
+});
+
+test("a direct GM handoff awards from any round state and becomes the next fallback exclusion", () => {
+  let state = setPlayerCount(createInitialState(), "ada", 2);
+  state = startRound(state, { roundId: "open-round", startedAt: 1000, durationMs: 5000 });
+
+  const handed = handSpotlight(state, {
+    roundId: "direct-handoff",
+    winnerId: "ada",
+    winnerName: "Ada",
+    awardedAt: 1200
+  });
+
+  assert.equal(handed.round.id, "direct-handoff");
+  assert.equal(handed.round.status, ROUND_STATUS.AWARDED);
+  assert.equal(handed.round.reason, AWARD_REASON.HANDOFF);
+  assert.equal(handed.round.winnerId, "ada");
+  assert.equal(getPlayerCount(handed, "ada"), 3);
+
+  const next = startRound(handed, {
+    roundId: "next-round",
+    startedAt: 2000,
+    durationMs: 5000
+  });
+  assert.equal(next.round.fallbackExcludedUserId, "ada");
 });
 
 test("awarding an open round increments exactly one player", () => {

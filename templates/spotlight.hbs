@@ -30,10 +30,14 @@
           {{#if wasTakenByGM}}
             <p>{{localize "CTM.Status.GMTakenWinner"}}</p>
           {{else}}
-            {{#if wasAutomatic}}
-              <p>{{localize "CTM.Status.AutomaticWinner"}}</p>
+            {{#if wasHandedByGM}}
+              <p>{{localize "CTM.Status.HandedWinner"}}</p>
             {{else}}
-              <p>{{localize "CTM.Status.ClaimedWinner"}}</p>
+              {{#if wasAutomatic}}
+                <p>{{localize "CTM.Status.AutomaticWinner"}}</p>
+              {{else}}
+                <p>{{localize "CTM.Status.ClaimedWinner"}}</p>
+              {{/if}}
             {{/if}}
           {{/if}}
         </div>
@@ -81,18 +85,6 @@
       </button>
       <p class="ctm-action-hint">{{localize "CTM.Actions.ClaimHint"}}</p>
     {{/if}}
-    <div class="ctm-audio-preference">
-      <button type="button" class="ctm-secondary-action ctm-mute-action {{#if soundsMuted}}is-muted{{/if}}" data-action="toggleSounds" aria-pressed="{{#if soundsMuted}}true{{else}}false{{/if}}">
-        {{#if soundsMuted}}
-          <i class="fa-solid fa-volume-xmark" aria-hidden="true"></i>
-          {{localize "CTM.Actions.UnmuteSounds"}}
-        {{else}}
-          <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
-          {{localize "CTM.Actions.MuteSounds"}}
-        {{/if}}
-      </button>
-      <span>{{localize "CTM.Actions.SoundPreferenceHint"}}</span>
-    </div>
   </section>
 
   <section class="ctm-roster" aria-labelledby="ctm-roster-heading">
@@ -108,11 +100,12 @@
     </div>
 
     {{#if hasPlayers}}
-      <div class="ctm-player-list">
+      <div class="ctm-player-list {{#if isGM}}is-gm{{/if}}">
         <div class="ctm-player-header" aria-hidden="true">
           <span>{{localize "CTM.Roster.In"}}</span>
           <span>{{localize "CTM.Roster.Player"}}</span>
           <span>{{localize "CTM.Roster.Claims"}}</span>
+          {{#if isGM}}<span>{{localize "CTM.Roster.Hand"}}</span>{{/if}}
         </div>
         {{#each players}}
           <div class="ctm-player-row {{#unless eligible}}is-ineligible{{/unless}}">
@@ -150,6 +143,15 @@
                 <strong class="ctm-count-pill">{{count}}</strong>
               {{/if}}
             </div>
+            {{#if ../isGM}}
+              <div class="ctm-handoff-cell">
+                {{#if eligible}}
+                  <button type="button" class="ctm-handoff-action" data-action="handSpotlight" data-player-id="{{id}}" aria-label="{{localize "CTM.Roster.HandSpotlight"}}" data-tooltip="{{localize "CTM.Roster.HandSpotlight"}}">
+                    <i class="fa-solid fa-hand-point-right" aria-hidden="true"></i>
+                  </button>
+                {{/if}}
+              </div>
+            {{/if}}
           </div>
         {{/each}}
       </div>
@@ -161,16 +163,34 @@
     {{/if}}
   </section>
 
-  {{#if isGM}}
-    <footer class="ctm-gm-tools">
-      <div>
+  <footer class="ctm-footer-tools">
+    {{#if isGM}}
+      <div class="ctm-gm-tool-copy">
         <strong>{{localize "CTM.GMTools.Title"}}</strong>
         <span>{{localize "CTM.GMTools.Hint"}}</span>
       </div>
-      <button type="button" class="ctm-secondary-action" data-action="resetCounts">
-        <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
-        {{localize "CTM.Actions.ResetCounts"}}
-      </button>
-    </footer>
-  {{/if}}
+    {{/if}}
+    <div class="ctm-footer-actions">
+      {{#if isGM}}
+        <button type="button" class="ctm-secondary-action" data-action="resetCounts">
+          <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+          {{localize "CTM.Actions.ResetCounts"}}
+        </button>
+      {{/if}}
+      <div class="ctm-audio-preference">
+        <button type="button" class="ctm-volume-trigger" popovertarget="ctm-volume-popover" aria-label="{{localize "CTM.Actions.SoundControls"}}">
+          {{#if soundVolumeZero}}
+            <i class="fa-solid fa-volume-xmark" data-volume-icon aria-hidden="true"></i>
+          {{else}}
+            <i class="fa-solid fa-volume-high" data-volume-icon aria-hidden="true"></i>
+          {{/if}}
+        </button>
+        <div id="ctm-volume-popover" class="ctm-volume-popover" popover="auto" data-volume-popover>
+          <label class="ctm-sr-only" for="ctm-sound-volume">{{localize "CTM.Actions.SoundVolume"}}</label>
+          <input id="ctm-sound-volume" type="range" min="0" max="100" step="5" name="soundVolume" value="{{soundVolumePercent}}" data-sound-volume aria-label="{{localize "CTM.Actions.SoundVolume"}}">
+          <output for="ctm-sound-volume" data-volume-output>{{soundVolumePercent}}%</output>
+        </div>
+      </div>
+    </div>
+  </footer>
 </div>

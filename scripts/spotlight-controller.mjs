@@ -21,6 +21,7 @@ import {
   ROUND_STATUS,
   SOUND_ENABLED_SETTING,
   SOUND_PATH_SETTING,
+  SOUND_VOLUME_SETTING,
   SOCKET_NAME,
   STATE_SETTING
 } from "./constants.mjs";
@@ -28,6 +29,7 @@ import {
   awardSpotlight,
   cancelRound,
   chooseFallbackWinner,
+  handSpotlight,
   isPlayerEligible,
   normalizeState,
   resetPlayerCounts,
@@ -120,8 +122,14 @@ export class SpotlightController {
     return this._configuredPath(GM_TAKE_SOUND_PATH_SETTING, DEFAULT_GM_TAKE_SOUND_PATH);
   }
 
-  get soundsMuted() {
-    return game.settings.get(MODULE_ID, MUTE_SOUNDS_SETTING) === true;
+  get soundVolumePercent() {
+    const configured = Number(game.settings.get(MODULE_ID, SOUND_VOLUME_SETTING));
+    if (!Number.isFinite(configured)) return 80;
+    return Math.max(0, Math.min(100, Math.round(configured)));
+  }
+
+  get soundVolume() {
+    return this.soundVolumePercent / 100;
   }
 
   get gmIconPath() {
@@ -131,11 +139,12 @@ export class SpotlightController {
       : DEFAULT_GM_ICON_PATH;
   }
 
-  initialize() {
+  async initialize() {
     this._state = normalizeState(game.settings.get(MODULE_ID, STATE_SETTING));
     game.socket.on(SOCKET_NAME, this.receiveSocket);
     this._startGMPresence();
     this._scheduleDeadline(this._state);
+    await this._migrateLegacyMute();
     this._preloadSounds();
 
     if (this._state.round.status === ROUND_STATUS.OPEN && this._shouldAutoOpen(this._state)) {
@@ -176,6 +185,10 @@ export class SpotlightController {
     return this._request(REQUEST.CLAIM, { roundId });
   }
 
+  requestHandSpotlight(userId) {
+    return this._request(REQUEST.HAND_SPOTLIGHT, { userId });
+  }
+
   requestEligibility(userId, included) {
     return this._request(REQUEST.SET_ELIGIBLE, { userId, included });
   }
@@ -188,12 +201,17 @@ export class SpotlightController {
     return this._request(REQUEST.RESET_COUNTS);
   }
 
-  async setSoundsMuted(muted) {
+  async setSoundVolume(volume) {
+    const parsed = Number(volume);
+    const normalized = Number.isFinite(parsed)
+      ? Math.max(0, Math.min(100, Math.round(parsed)))
+      : 80;
+
     try {
-      await game.settings.set(MODULE_ID, MUTE_SOUNDS_SETTING, muted === true);
+      await game.settings.set(MODULE_ID, SOUND_VOLUME_SETTING, normalized);
       return true;
     } catch (error) {
-      console.error(`${MODULE_ID} | Could not update the personal sound preference`, error);
+      console.error(`${MODULE_ID} | Could not update the personal sound volume`, error);
       ui.notifications.error(game.i18n.localize("CTM.Notifications.OperationFailed"));
       return false;
     }
@@ -283,9 +301,19 @@ export class SpotlightController {
     this._preloadSounds();
   }
 
-  onSoundMuteChanged() {
-    if (!this.soundsMuted) this._preloadSounds();
-    if (this.app.rendered) this.app.render({ force: true });
+  onSoundVolumeChanged() {
+    const volume = this.soundVolumePercent;
+    if (volume > 0) this._preloadSounds();
+    if (!this.app.rendered) return;
+    const slider = this.app.element?.querySelector?.("[data-sound-volume]");
+    const output = this.app.element?.querySelector?.("[data-volume-output]");
+    const icon = this.app.element?.querySelector?.("[data-volume-icon]");
+    if (slider && slider !== globalThis.document?.activeElement) slider.value = String(volume);
+    if (output) output.textContent = `${volume}%`;
+    if (icon) {
+      icon.classList.toggle("fa-volume-high", volume > 0);
+      icon.classList.toggle("fa-volume-xmark", volume === 0);
+    }
   }
 
   onAppearanceSettingsChanged() {
@@ -360,6 +388,8 @@ export class SpotlightController {
         return this._takeSpotlight(sender);
       case REQUEST.CLAIM:
         return this._claimRound(sender, message.roundId);
+      case REQUEST.HAND_SPOTLIGHT:
+        return this._handSpotlight(sender, message.userId);
       case REQUEST.SET_ELIGIBLE:
         return this._setEligibility(sender, message.userId, message.included);
       case REQUEST.SET_COUNT:
@@ -430,6 +460,29 @@ export class SpotlightController {
     });
     const saving = this._saveState(winner);
     this._playConfiguredSound(this.playerClaimSoundEnabled, this.playerClaimSoundPath, "player spotlight claim");
+    await saving;
+    return true;
+  }
+
+  async _handSpotlight(sender, userId) {
+    if (!sender.isGM) return false;
+
+    const player = game.users.get(userId);
+    const state = this.state;
+    if (!player?.active || player.isGM || !this.isUserEligible(player, state)) return false;
+
+    const winner = handSpotlight(state, {
+      roundId: foundry.utils.randomID(),
+      winnerId: player.id,
+      winnerName: this.getPlayerPresentation(player).name,
+      awardedAt: this.serverTime()
+    });
+    const saving = this._saveState(winner);
+    this._playConfiguredSound(
+      this.playerClaimSoundEnabled,
+      this.playerClaimSoundPath,
+      "player spotlight handoff"
+    );
     await saving;
     return true;
   }
@@ -513,6 +566,19 @@ export class SpotlightController {
     return typeof configured === "string" && configured.trim() ? configured.trim() : fallback;
   }
 
+  async _migrateLegacyMute() {
+    if (game.settings.get(MODULE_ID, MUTE_SOUNDS_SETTING) !== true) return false;
+
+    try {
+      await game.settings.set(MODULE_ID, SOUND_VOLUME_SETTING, 0);
+      await game.settings.set(MODULE_ID, MUTE_SOUNDS_SETTING, false);
+      return true;
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Could not migrate the legacy mute preference`, error);
+      return false;
+    }
+  }
+
   _shouldAutoOpen(state) {
     return game.user.isGM || this.isUserEligible(game.user, state);
   }
@@ -520,7 +586,7 @@ export class SpotlightController {
   _playConfiguredSound(enabled, src, description) {
     if (!enabled) return;
 
-    if (!this.soundsMuted) this._playSoundLocally(src, description);
+    this._playSoundLocally(src, description);
     game.socket.emit(SOCKET_NAME, {
       command: REQUEST.PLAY_SOUND,
       soundId: foundry.utils.randomID(),
@@ -543,12 +609,13 @@ export class SpotlightController {
   }
 
   _playSoundLocally(src, description = "spotlight") {
-    if (this.soundsMuted) return false;
+    const volume = this.soundVolume;
+    if (volume <= 0) return false;
 
     try {
       const playback = foundry.audio.AudioHelper.play({
         src,
-        volume: 0.8,
+        volume,
         loop: false,
         autoplay: true,
         channel: "interface"
@@ -564,7 +631,7 @@ export class SpotlightController {
   }
 
   _preloadSounds() {
-    if (this.soundsMuted) return;
+    if (this.soundVolume <= 0) return;
     const sounds = [
       [this.alertSoundEnabled, this.alertSoundPath, "spotlight throw"],
       [this.playerClaimSoundEnabled, this.playerClaimSoundPath, "player spotlight claim"],
