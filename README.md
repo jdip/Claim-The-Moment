@@ -91,3 +91,5 @@ The pure state transitions are covered by Node's built-in test runner. Full sock
 [MIT](LICENSE)
 
 The bundled audio is available under CC0 and CC BY 4.0 licenses. See [sounds/LICENSE.md](sounds/LICENSE.md) for source links, attribution, and adaptation details.
+
+The bundled GM icon is adapted from Lorc's CC BY 3.0 **Daemon skull**. See [assets/LICENSE.md](assets/LICENSE.md) for the source, attribution, license, and adaptation details.

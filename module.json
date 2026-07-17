@@ -2,7 +2,7 @@
   "id": "claim-the-moment",
   "title": "Claim the Moment",
   "description": "A collaborative spotlight manager for Daggerheart. The GM throws the spotlight, players race to claim it, and a fair least-served fallback keeps the story moving.",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "authors": [
     {
       "name": "jdip"
