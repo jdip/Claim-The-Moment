@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claim the Moment onboarding media preview</title>
+  <link rel="stylesheet" href="../styles/claim-the-moment.css">
+  <link rel="stylesheet" href="../styles/onboarding.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-h1: Georgia, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      padding: 54px 28px 32px;
+      place-items: center;
+      color: #f6f0e4;
+      background:
+        radial-gradient(circle at 50% 5%, rgba(142, 66, 111, 0.34), transparent 34%),
+        linear-gradient(rgba(7, 7, 11, 0.72), rgba(7, 7, 11, 0.92)),
+        repeating-linear-gradient(120deg, #17121d 0 2px, #0d0c12 2px 18px);
+      font-family: var(--font-body);
+    }
+
+    .media-caption {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 34px;
+      padding: 7px 16px;
+      color: #ffe29a;
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(240, 197, 106, 0.35);
+      border-radius: 999px;
+      background: rgba(28, 26, 32, 0.94);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.46);
+      transform: translateX(-50%);
+    }
+
+    .media-caption span {
+      display: grid;
+      width: 21px;
+      height: 21px;
+      place-items: center;
+      color: #251a17;
+      border-radius: 50%;
+      background: #f0c56a;
+      font-size: 11px;
+    }
+
+    .mock-window {
+      width: min(540px, calc(100vw - 48px));
+      overflow: visible;
+      border: 1px solid rgba(244, 221, 164, 0.34);
+      border-radius: 9px;
+      background: #1c1a20;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.62), 0 0 42px rgba(95, 41, 79, 0.18);
+    }
+
+    .mock-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 38px;
+      padding: 7px 10px 7px 14px;
+      color: #f6f0e4;
+      border-bottom: 1px solid rgba(244, 221, 164, 0.18);
+      background: linear-gradient(180deg, #302a35, #242029);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mock-close {
+      display: grid;
+      width: 25px;
+      height: 25px;
+      place-items: center;
+      color: #bbb1a2;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    .mock-window .window-content {
+      padding: 0;
+      overflow: visible;
+    }
+
+    .ctm-stage { min-height: 120px; }
+    .ctm-roster { padding-top: 16px; padding-bottom: 16px; }
+
+    .ctm-primary-action,
+    .ctm-secondary-action,
+    .ctm-handoff-action,
+    .ctm-help-trigger,
+    .ctm-volume-trigger {
+      cursor: default;
+      font-family: inherit;
+    }
+
+    .ctm-help-trigger::before { content: "?"; font-weight: 900; }
+    .ctm-volume-trigger::before { content: "♪"; font-size: 18px; }
+    .ctm-help-trigger i,
+    .ctm-volume-trigger i { display: none; }
+
+    .ctm-contention-status,
+    .action-symbol,
+    .ctm-handoff-action { font-family: Arial, sans-serif; }
+
+    .ctm-handoff-action { font-size: 17px; }
+    .ctm-player-row { color: #f6f0e4; }
+
+    .state-ready .only-open,
+    .state-ready .only-winner,
+    .state-open .only-ready,
+    .state-open .only-winner,
+    .state-winner .only-ready,
+    .state-winner .only-open { display: none; }
+
+    .state-open .not-open { display: none; }
+
+    .role-player .only-gm,
+    .role-gm .only-player { display: none !important; }
+
+    .role-player .ctm-player-list.is-gm .ctm-player-header,
+    .role-player .ctm-player-list.is-gm .ctm-player-row { grid-template-columns: 62px minmax(0, 1fr) 74px; }
+
+    .role-player .ctm-player-list { --player-columns: 3; }
+
+    .state-winner .ctm-player-row.is-new-winner {
+      background: linear-gradient(90deg, rgba(240, 197, 106, 0.14), transparent 80%);
+    }
+
+    .winner-avatar {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      place-items: center;
+      color: #ffe29a;
+      background: linear-gradient(145deg, #6d355d, #28202c);
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="media-caption"><span data-step-number>1</span><strong data-caption>Open Claim the Moment from Token Controls or press Shift+M.</strong></div>
+
+  <article class="claim-the-moment mock-window" aria-label="Claim the Moment window preview">
+    <header class="mock-titlebar"><span>Claim the Moment</span><span class="mock-close" aria-hidden="true">×</span></header>
+    <div class="window-content">
+      <div class="ctm-shell">
+        <section class="ctm-stage">
+          <div class="only-ready ctm-resting-mark" aria-hidden="true">☾</div>
+          <div class="only-ready ctm-stage-copy">
+            <p class="ctm-stage-kicker">The table is listening</p>
+            <h2>Ready for the next moment</h2>
+            <p>Throw the spotlight when the scene is ready to move.</p>
+          </div>
+
+          <div class="only-open ctm-countdown" style="--ctm-progress: 67%;" aria-hidden="true">
+            <div class="ctm-countdown-inner"><strong>8.0</strong><span>seconds</span></div>
+          </div>
+          <div class="only-open ctm-stage-copy">
+            <p class="ctm-stage-kicker">The spotlight is open</p>
+            <h2>Claim the moment</h2>
+            <p>The first eligible player to answer takes the spotlight.</p>
+          </div>
+          <div class="only-open ctm-progress-track" aria-hidden="true"><span style="width:67%;"></span></div>
+
+          <div class="only-winner ctm-winner-mark" aria-hidden="true"><span class="winner-avatar">A</span></div>
+          <div class="only-winner ctm-stage-copy">
+            <p class="ctm-stage-kicker">The spotlight is on</p>
+            <h2>Aria Stone</h2>
+            <p>Aria claimed the spotlight first.</p>
+          </div>
+        </section>
+
+        <section class="ctm-actions">
+          <div class="only-gm ctm-gm-action-grid">
+            <button type="button" class="ctm-primary-action"><span class="action-symbol">⚡</span><span class="not-open">Throw the Spotlight</span><span class="only-open">Countdown in Progress</span></button>
+            <button type="button" class="ctm-primary-action ctm-take-action"><span class="action-symbol">◆</span> Take the Spotlight</button>
+          </div>
+          <p class="only-gm ctm-action-hint">Start a claim round, take focus as GM, or hand it directly to an eligible player.</p>
+
+          <button type="button" class="only-player ctm-primary-action ctm-claim-action only-open"><span class="action-symbol">✋</span> Claim the Spotlight</button>
+          <button type="button" class="only-player ctm-primary-action not-open" disabled><span class="action-symbol">✋</span> Waiting for the GM</button>
+          <p class="only-player ctm-action-hint">Claim is available only while the countdown is open.</p>
+        </section>
+
+        <section class="ctm-roster" aria-label="Players online">
+          <div class="ctm-section-heading">
+            <div><p class="ctm-eyebrow">Current table</p><h2>Players Online</h2></div>
+            <div class="ctm-roster-counts">
+              <span class="ctm-eligible-count">✓ 3 Eligible</span>
+              <span class="ctm-online-count">● 4 Online</span>
+            </div>
+          </div>
+
+          <div class="ctm-player-list is-gm">
+            <div class="ctm-player-header">
+              <span>In</span><span>Player</span><span>Claims</span><span class="only-gm">Hand</span>
+            </div>
+
+            <div class="ctm-player-row is-new-winner">
+              <div class="ctm-contention-cell">
+                <label class="only-gm ctm-toggle"><input type="checkbox" checked><span class="ctm-toggle-track"><span></span></span></label>
+                <span class="only-player ctm-contention-status">●</span>
+              </div>
+              <div class="ctm-player-identity"><span class="ctm-avatar">A</span><span class="ctm-player-name">Aria Stone</span></div>
+              <div class="ctm-count-cell"><input class="only-gm ctm-count-input" value="0" aria-label="Claims" data-aria-count><strong class="only-player ctm-count-pill" data-aria-count>0</strong></div>
+              <div class="only-gm ctm-handoff-cell"><button class="ctm-handoff-action" aria-label="Hand spotlight">›</button></div>
+            </div>
+
+            <div class="ctm-player-row">
+              <div class="ctm-contention-cell">
+                <label class="only-gm ctm-toggle"><input type="checkbox" checked><span class="ctm-toggle-track"><span></span></span></label>
+                <span class="only-player ctm-contention-status">●</span>
+              </div>
+              <div class="ctm-player-identity"><span class="ctm-avatar">B</span><span class="ctm-player-name">Bram Hollow</span></div>
+              <div class="ctm-count-cell"><input class="only-gm ctm-count-input" value="1" aria-label="Claims"><strong class="only-player ctm-count-pill">1</strong></div>
+              <div class="only-gm ctm-handoff-cell"><button class="ctm-handoff-action" aria-label="Hand spotlight">›</button></div>
+            </div>
+
+            <div class="ctm-player-row">
+              <div class="ctm-contention-cell">
+                <label class="only-gm ctm-toggle"><input type="checkbox" checked><span class="ctm-toggle-track"><span></span></span></label>
+                <span class="only-player ctm-contention-status">●</span>
+              </div>
+              <div class="ctm-player-identity"><span class="ctm-avatar">C</span><span class="ctm-player-name">Cora Vale</span></div>
+              <div class="ctm-count-cell"><input class="only-gm ctm-count-input" value="2" aria-label="Claims"><strong class="only-player ctm-count-pill">2</strong></div>
+              <div class="only-gm ctm-handoff-cell"><button class="ctm-handoff-action" aria-label="Hand spotlight">›</button></div>
+            </div>
+
+            <div class="ctm-player-row is-ineligible">
+              <div class="ctm-contention-cell">
+                <label class="only-gm ctm-toggle"><input type="checkbox"><span class="ctm-toggle-track"><span></span></span></label>
+                <span class="only-player ctm-contention-status">×</span>
+              </div>
+              <div class="ctm-player-identity"><span class="ctm-avatar">D</span><span class="ctm-player-name">Dain Ashfall</span></div>
+              <div class="ctm-count-cell"><input class="only-gm ctm-count-input" value="3" aria-label="Claims"><strong class="only-player ctm-count-pill">3</strong></div>
+              <div class="only-gm ctm-handoff-cell"></div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="ctm-footer-tools">
+          <button type="button" class="ctm-help-trigger" aria-label="Help"></button>
+          <div class="only-gm ctm-gm-tool-copy"><strong>GM tools</strong><span>Set contention and claims before throwing.</span></div>
+          <div class="ctm-footer-actions">
+            <button type="button" class="only-gm ctm-secondary-action">↻ Reset All</button>
+            <button type="button" class="ctm-volume-trigger" aria-label="Sound volume"></button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </article>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = params.get("state") || "ready";
+    const role = params.get("role") || "gm";
+    const step = params.get("step") || "1";
+    const captions = {
+      "1": "Open Claim the Moment from Token Controls or press Shift+M.",
+      "2": "The GM throws the spotlight and every eligible player sees the countdown.",
+      "3": "The first eligible player to answer claims the moment.",
+      "4": "The winner appears for everyone and their spotlight total increases."
+    };
+    document.body.classList.add(`state-${state}`, `role-${role}`);
+    document.querySelector("[data-step-number]").textContent = step;
+    document.querySelector("[data-caption]").textContent = captions[step] || captions["1"];
+    document.querySelectorAll("[data-aria-count]").forEach((element) => {
+      const value = state === "winner" ? "1" : "0";
+      if (element instanceof HTMLInputElement) element.value = value;
+      else element.textContent = value;
+    });
+  </script>
+</body>
+</html>

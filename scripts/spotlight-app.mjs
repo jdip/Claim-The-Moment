@@ -1,4 +1,4 @@
-import { AWARD_REASON, ROUND_STATUS } from "./constants.mjs";
+import { AWARD_REASON, ROUND_STATUS, SPOTLIGHT_CONTROL_ICON } from "./constants.mjs";
 import { getPlayerCount } from "./state.mjs";
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -8,6 +8,7 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     super(options);
     this.controller = controller;
     this._ticker = null;
+    this._lastAnnouncedSecond = null;
   }
 
   static DEFAULT_OPTIONS = {
@@ -16,7 +17,7 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: "form",
     window: {
       title: "CTM.Window.Title",
-      icon: "fa-solid fa-wand-sparkles",
+      icon: SPOTLIGHT_CONTROL_ICON,
       resizable: true,
       minimizable: true
     },
@@ -34,6 +35,7 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       takeSpotlight: SpotlightApp.onTakeSpotlight,
       claimSpotlight: SpotlightApp.onClaimSpotlight,
       handSpotlight: SpotlightApp.onHandSpotlight,
+      openHelp: SpotlightApp.onOpenHelp,
       toggleEligibility: SpotlightApp.onToggleEligibility,
       resetCounts: SpotlightApp.onResetCounts
     }
@@ -60,7 +62,7 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       .map((user) => ({
         id: user.id,
         ...this.controller.getPlayerPresentation(user),
-        count: getPlayerCount(state, user.id),
+        count: state.counts[user.id] ?? 0,
         eligible: this.controller.isUserEligible(user, state)
       }))
       .sort((left, right) => (left.count - right.count)
@@ -74,10 +76,18 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const eligibleCount = players.filter((player) => player.eligible).length;
     const hasWinner = round.status === ROUND_STATUS.AWARDED && Boolean(round.winnerName);
     const winner = hasWinner ? this.controller.getWinnerPresentation(round) : null;
+    const soundVolumePercent = this.controller.soundVolumePercent;
 
     let claimLabel = "CTM.Actions.WaitingForThrow";
     if (isOpen && !currentPlayer?.eligible) claimLabel = "CTM.Actions.NotInContention";
     else if (isOpen) claimLabel = "CTM.Actions.ClaimSpotlight";
+
+    let throwDisabledReason = null;
+    if (isGM && !isOpen && players.length === 0) {
+      throwDisabledReason = "CTM.Readiness.NoOnlinePlayers";
+    } else if (isGM && !isOpen && eligibleCount === 0) {
+      throwDisabledReason = "CTM.Readiness.NoEligiblePlayers";
+    }
 
     return {
       ...context,
@@ -96,12 +106,13 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       wasHandedByGM: round.reason === AWARD_REASON.HANDOFF,
       wasTakenByGM: round.reason === AWARD_REASON.GM,
       remainingSeconds: Math.ceil(remaining / 1000),
-      progressPercent: Math.round((remaining / duration) * 100),
+      progressPercent: Math.max(0, Math.min(100, Math.round((remaining / duration) * 100))),
       roundId: round.id,
-      soundVolumePercent: this.controller.soundVolumePercent,
-      soundVolumeZero: this.controller.soundVolumePercent === 0,
+      soundVolumePercent,
+      soundVolumeZero: soundVolumePercent === 0,
       canClaim,
       claimLabel,
+      throwDisabledReason,
       canThrow: isGM && !isOpen && eligibleCount > 0,
       canTake: isGM
     };
@@ -127,6 +138,7 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _stopTicker() {
     if (this._ticker) clearInterval(this._ticker);
     this._ticker = null;
+    this._lastAnnouncedSecond = null;
   }
 
   _updateCountdown() {
@@ -140,59 +152,59 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const now = this.controller.serverTime();
     const remaining = Math.max(0, state.round.endsAt - now);
     const duration = Math.max(1, state.round.endsAt - state.round.startedAt);
-    const percent = Math.round((remaining / duration) * 100);
+    const percent = Math.max(0, Math.min(100, Math.round((remaining / duration) * 100)));
     const seconds = Math.ceil(remaining / 1000);
 
     const number = this.element.querySelector("[data-countdown-number]");
     const ring = this.element.querySelector("[data-countdown-ring]");
     const bar = this.element.querySelector("[data-countdown-bar]");
+    const announcement = this.element.querySelector("[data-countdown-announcement]");
     if (number) number.textContent = String(seconds);
     if (ring) ring.style.setProperty("--ctm-progress", `${percent}%`);
     if (bar) bar.style.width = `${percent}%`;
+    if (announcement && seconds !== this._lastAnnouncedSecond) {
+      announcement.textContent = game.i18n.format("CTM.Status.CountdownAnnouncement", { seconds });
+      this._lastAnnouncedSecond = seconds;
+    }
 
     if (remaining <= 0) this.controller.ensureRoundResolved();
   }
 
   static async onThrowSpotlight(_event, target) {
-    target.disabled = true;
-    const started = await this.controller.requestStart();
-    if (!started && target.isConnected) target.disabled = false;
+    return SpotlightApp.runPendingAction(target, () => this.controller.requestStart());
   }
 
   static async onTakeSpotlight(_event, target) {
-    target.disabled = true;
-    const taken = await this.controller.requestTake();
-    if (!taken && target.isConnected) target.disabled = false;
+    return SpotlightApp.runPendingAction(target, () => this.controller.requestTake());
   }
 
   static async onClaimSpotlight(_event, target) {
-    target.disabled = true;
-    target.setAttribute("aria-busy", "true");
-    const claimed = await this.controller.requestClaim(target.dataset.roundId);
-    if (!claimed && target.isConnected) {
-      target.disabled = false;
-      target.removeAttribute("aria-busy");
-    }
+    return SpotlightApp.runPendingAction(
+      target,
+      () => this.controller.requestClaim(target.dataset.roundId),
+      { busy: true }
+    );
   }
 
   static async onHandSpotlight(_event, target) {
-    target.disabled = true;
-    target.setAttribute("aria-busy", "true");
-    const handed = await this.controller.requestHandSpotlight(target.dataset.playerId);
-    if (!handed && target.isConnected) {
-      target.disabled = false;
-      target.removeAttribute("aria-busy");
-    }
+    return SpotlightApp.runPendingAction(
+      target,
+      () => this.controller.requestHandSpotlight(target.dataset.playerId),
+      { busy: true }
+    );
+  }
+
+  static onOpenHelp() {
+    this.controller.openHelp();
   }
 
   static async onToggleEligibility(_event, target) {
     const included = target.checked;
-    target.disabled = true;
-    const updated = await this.controller.requestEligibility(target.dataset.eligibleUser, included);
-    if (!updated && target.isConnected) {
-      target.checked = !included;
-      target.disabled = false;
-    }
+    return SpotlightApp.runPendingAction(
+      target,
+      () => this.controller.requestEligibility(target.dataset.eligibleUser, included),
+      { onFailure: () => { target.checked = !included; } }
+    );
   }
 
   static async onSubmitForm(event, _form, _formData) {
@@ -206,32 +218,66 @@ export class SpotlightApp extends HandlebarsApplicationMixin(ApplicationV2) {
       target.value = String(volume);
       const output = this.element?.querySelector?.("[data-volume-output]");
       if (output) output.textContent = `${volume}%`;
-      return this.controller.setSoundVolume(volume);
+      const updated = await this.controller.setSoundVolume(volume);
+      if (!updated) {
+        const persisted = this.controller.soundVolumePercent;
+        target.value = String(persisted);
+        if (output) output.textContent = `${persisted}%`;
+      }
+      return updated;
     }
 
     const userId = target?.dataset?.countUser;
     if (!userId) return false;
 
     const parsed = Number(target.value);
-    const count = Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+    const count = Number.isFinite(parsed)
+      ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.trunc(parsed)))
+      : 0;
     target.value = String(count);
-    target.disabled = true;
-    const updated = await this.controller.requestCount(userId, count);
-    if (!updated && target.isConnected) target.disabled = false;
-    return updated;
+    return SpotlightApp.runPendingAction(
+      target,
+      () => this.controller.requestCount(userId, count),
+      {
+        onFailure: () => {
+          target.value = String(getPlayerCount(this.controller.state, userId));
+        }
+      }
+    );
   }
 
   static async onResetCounts(_event, target) {
-    target.disabled = true;
-    const confirmed = await DialogV2.confirm({
-      window: {
-        title: game.i18n.localize("CTM.Reset.Title"),
-        icon: "fa-solid fa-arrow-rotate-left"
-      },
-      content: `<p>${game.i18n.localize("CTM.Reset.Confirm")}</p>`
+    return SpotlightApp.runPendingAction(target, async () => {
+      const confirmed = await DialogV2.confirm({
+        window: {
+          title: game.i18n.localize("CTM.Reset.Title"),
+          icon: "fa-solid fa-arrow-rotate-left"
+        },
+        content: `<p>${game.i18n.localize("CTM.Reset.Confirm")}</p>`
+      });
+      if (!confirmed) return false;
+      return this.controller.requestResetCounts();
     });
+  }
 
-    if (confirmed) await this.controller.requestResetCounts();
-    else target.disabled = false;
+  static async runPendingAction(target, operation, { busy = false, onFailure = null } = {}) {
+    target.disabled = true;
+    if (busy) target.setAttribute?.("aria-busy", "true");
+
+    let succeeded = false;
+    try {
+      succeeded = await operation() === true;
+      return succeeded;
+    } catch (error) {
+      console.error("claim-the-moment | Window action failed", error);
+      ui.notifications.error(game.i18n.localize("CTM.Notifications.OperationFailed"));
+      return false;
+    } finally {
+      if (!succeeded && target.isConnected !== false) {
+        onFailure?.();
+        target.disabled = false;
+        if (busy) target.removeAttribute?.("aria-busy");
+      }
+    }
   }
 }

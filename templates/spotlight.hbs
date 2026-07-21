@@ -1,13 +1,13 @@
 <div class="ctm-shell">
-  <section class="ctm-stage" aria-live="polite">
+  <section class="ctm-stage">
     {{#if isOpen}}
-      <div class="ctm-countdown" data-countdown-ring style="--ctm-progress: {{progressPercent}}%;">
+      <div class="ctm-countdown" data-countdown-ring style="--ctm-progress: {{progressPercent}}%;" aria-hidden="true">
         <div class="ctm-countdown-inner">
           <strong data-countdown-number>{{remainingSeconds}}</strong>
           <span>{{localize "CTM.Status.Seconds"}}</span>
         </div>
       </div>
-      <div class="ctm-stage-copy">
+      <div class="ctm-stage-copy" aria-live="polite" aria-atomic="true">
         <p class="ctm-stage-kicker">{{localize "CTM.Status.OpenKicker"}}</p>
         <h2>{{localize "CTM.Status.Open"}}</h2>
         <p>{{localize "CTM.Status.OpenHint"}}</p>
@@ -15,6 +15,7 @@
       <div class="ctm-progress-track" aria-hidden="true">
         <span data-countdown-bar style="width: {{progressPercent}}%;"></span>
       </div>
+      <p class="ctm-sr-only" data-countdown-announcement aria-live="polite" aria-atomic="true">{{localize "CTM.Status.CountdownAnnouncement" seconds=remainingSeconds}}</p>
     {{else}}
       {{#if hasWinner}}
         <div class="ctm-winner-mark {{#if winnerIsGM}}is-gm{{/if}}" aria-hidden="true">
@@ -24,7 +25,7 @@
             <span>{{winnerInitial}}</span>
           {{/if}}
         </div>
-        <div class="ctm-stage-copy">
+        <div class="ctm-stage-copy" aria-live="polite" aria-atomic="true">
           <p class="ctm-stage-kicker">{{localize "CTM.Status.SpotlightOn"}}</p>
           <h2>{{winnerName}}</h2>
           {{#if wasTakenByGM}}
@@ -44,14 +45,14 @@
       {{else}}
         {{#if isCancelled}}
           <div class="ctm-resting-mark" aria-hidden="true"><i class="fa-solid fa-user-slash"></i></div>
-          <div class="ctm-stage-copy">
+          <div class="ctm-stage-copy" aria-live="polite" aria-atomic="true">
             <p class="ctm-stage-kicker">{{localize "CTM.Status.RoundEnded"}}</p>
             <h2>{{localize "CTM.Status.NoWinner"}}</h2>
             <p>{{localize "CTM.Status.NoWinnerHint"}}</p>
           </div>
         {{else}}
           <div class="ctm-resting-mark" aria-hidden="true"><i class="fa-regular fa-moon"></i></div>
-          <div class="ctm-stage-copy">
+          <div class="ctm-stage-copy" aria-live="polite" aria-atomic="true">
             <p class="ctm-stage-kicker">{{localize "CTM.Status.ReadyKicker"}}</p>
             <h2>{{localize "CTM.Status.Ready"}}</h2>
             <p>{{localize "CTM.Status.ReadyHint"}}</p>
@@ -77,7 +78,11 @@
           {{localize "CTM.Actions.TakeSpotlight"}}
         </button>
       </div>
-      <p class="ctm-action-hint">{{localize "CTM.Actions.GMActionHint"}}</p>
+      {{#if throwDisabledReason}}
+        <p class="ctm-action-hint is-warning"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>{{localize throwDisabledReason}}</p>
+      {{else}}
+        <p class="ctm-action-hint">{{localize "CTM.Actions.GMActionHint"}}</p>
+      {{/if}}
     {{else}}
       <button type="button" class="ctm-primary-action ctm-claim-action" data-action="claimSpotlight" data-round-id="{{roundId}}" {{#unless canClaim}}disabled{{/unless}}>
         <i class="fa-solid fa-hand" aria-hidden="true"></i>
@@ -93,28 +98,43 @@
         <p class="ctm-eyebrow">{{localize "CTM.Roster.Eyebrow"}}</p>
         <h2 id="ctm-roster-heading">{{localize "CTM.Roster.Title"}}</h2>
       </div>
-      <span class="ctm-online-count">
-        <i class="fa-solid fa-signal" aria-hidden="true"></i>
-        {{players.length}} {{localize "CTM.Roster.Online"}}
-      </span>
+      <div class="ctm-roster-counts">
+        <span class="ctm-eligible-count {{#unless eligibleCount}}is-empty{{/unless}}">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          {{eligibleCount}} {{localize "CTM.Roster.Eligible"}}
+        </span>
+        <span class="ctm-online-count">
+          <i class="fa-solid fa-signal" aria-hidden="true"></i>
+          {{players.length}} {{localize "CTM.Roster.Online"}}
+        </span>
+      </div>
     </div>
 
     {{#if hasPlayers}}
-      <div class="ctm-player-list {{#if isGM}}is-gm{{/if}}">
-        <div class="ctm-player-header" aria-hidden="true">
-          <span>{{localize "CTM.Roster.In"}}</span>
-          <span>{{localize "CTM.Roster.Player"}}</span>
-          <span>{{localize "CTM.Roster.Claims"}}</span>
-          {{#if isGM}}<span>{{localize "CTM.Roster.Hand"}}</span>{{/if}}
+      {{#unless eligibleCount}}
+        <div class="ctm-readiness-warning" role="status">
+          <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+          {{#if isGM}}
+            <span>{{localize "CTM.Readiness.EnablePlayer"}}</span>
+          {{else}}
+            <span>{{localize "CTM.Readiness.WaitForGM"}}</span>
+          {{/if}}
+        </div>
+      {{/unless}}
+      <div class="ctm-player-list {{#if isGM}}is-gm{{/if}}" role="table" aria-labelledby="ctm-roster-heading">
+        <div class="ctm-player-header" role="row">
+          <span role="columnheader">{{localize "CTM.Roster.In"}}</span>
+          <span role="columnheader">{{localize "CTM.Roster.Player"}}</span>
+          <span role="columnheader">{{localize "CTM.Roster.Claims"}}</span>
+          {{#if isGM}}<span role="columnheader">{{localize "CTM.Roster.Hand"}}</span>{{/if}}
         </div>
         {{#each players}}
-          <div class="ctm-player-row {{#unless eligible}}is-ineligible{{/unless}}">
-            <div class="ctm-contention-cell">
+          <div class="ctm-player-row {{#unless eligible}}is-ineligible{{/unless}}" role="row">
+            <div class="ctm-contention-cell" role="cell">
               {{#if ../isGM}}
-                <label class="ctm-toggle" data-tooltip="{{localize "CTM.Roster.ToggleTooltip"}}">
-                  <input type="checkbox" data-action="toggleEligibility" data-eligible-user="{{id}}" {{#if eligible}}checked{{/if}}>
+                <label class="ctm-toggle" data-tooltip="{{localize "CTM.Roster.ToggleFor" name=name}}">
+                  <input type="checkbox" data-action="toggleEligibility" data-eligible-user="{{id}}" aria-label="{{localize "CTM.Roster.ToggleFor" name=name}}" {{#if eligible}}checked{{/if}}>
                   <span class="ctm-toggle-track" aria-hidden="true"><span></span></span>
-                  <span class="ctm-sr-only">{{localize "CTM.Roster.Toggle"}}</span>
                 </label>
               {{else}}
                 <span class="ctm-contention-status" data-tooltip="{{#if eligible}}{{localize "CTM.Roster.InContention"}}{{else}}{{localize "CTM.Roster.OutOfContention"}}{{/if}}">
@@ -128,7 +148,7 @@
                 </span>
               {{/if}}
             </div>
-            <div class="ctm-player-identity">
+            <div class="ctm-player-identity" role="cell" id="ctm-player-name-{{id}}">
               {{#if image}}
                 <img class="ctm-avatar" src="{{image}}" alt="">
               {{else}}
@@ -136,17 +156,17 @@
               {{/if}}
               <span class="ctm-player-name">{{name}}</span>
             </div>
-            <div class="ctm-count-cell">
+            <div class="ctm-count-cell" role="cell">
               {{#if ../isGM}}
-                <input class="ctm-count-input" type="number" min="0" step="1" name="count.{{id}}" value="{{count}}" data-count-user="{{id}}" aria-label="{{localize "CTM.Roster.Claims"}}">
+                <input class="ctm-count-input" type="number" min="0" max="9007199254740991" step="1" name="count.{{id}}" value="{{count}}" data-count-user="{{id}}" aria-label="{{localize "CTM.Roster.ClaimsFor" name=name}}">
               {{else}}
                 <strong class="ctm-count-pill">{{count}}</strong>
               {{/if}}
             </div>
             {{#if ../isGM}}
-              <div class="ctm-handoff-cell">
+              <div class="ctm-handoff-cell" role="cell">
                 {{#if eligible}}
-                  <button type="button" class="ctm-handoff-action" data-action="handSpotlight" data-player-id="{{id}}" aria-label="{{localize "CTM.Roster.HandSpotlight"}}" data-tooltip="{{localize "CTM.Roster.HandSpotlight"}}">
+                  <button type="button" class="ctm-handoff-action" data-action="handSpotlight" data-player-id="{{id}}" aria-label="{{localize "CTM.Roster.HandSpotlightTo" name=name}}" data-tooltip="{{localize "CTM.Roster.HandSpotlightTo" name=name}}">
                     <i class="fa-solid fa-hand-point-right" aria-hidden="true"></i>
                   </button>
                 {{/if}}
@@ -158,12 +178,19 @@
     {{else}}
       <div class="ctm-empty-roster">
         <i class="fa-solid fa-users-slash" aria-hidden="true"></i>
-        <p>{{localize "CTM.Roster.Empty"}}</p>
+        {{#if isGM}}
+          <p>{{localize "CTM.Roster.EmptyGM"}}</p>
+        {{else}}
+          <p>{{localize "CTM.Roster.EmptyPlayer"}}</p>
+        {{/if}}
       </div>
     {{/if}}
   </section>
 
   <footer class="ctm-footer-tools">
+    <button type="button" class="ctm-help-trigger" data-action="openHelp" aria-label="{{localize "CTM.Actions.Help"}}" data-tooltip="{{localize "CTM.Actions.Help"}}">
+      <i class="fa-solid fa-question" aria-hidden="true"></i>
+    </button>
     {{#if isGM}}
       <div class="ctm-gm-tool-copy">
         <strong>{{localize "CTM.GMTools.Title"}}</strong>

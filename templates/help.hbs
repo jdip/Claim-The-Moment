@@ -1,0 +1,98 @@
+<article class="ctm-help">
+  <header class="ctm-help-intro">
+    <p class="ctm-eyebrow">{{localize "CTM.Help.Eyebrow"}}</p>
+    <h1>{{localize "CTM.Help.Heading"}}</h1>
+    <p>{{localize "CTM.Help.Intro"}}</p>
+    <button type="button" class="ctm-primary-action ctm-help-open" data-action="openSpotlight">
+      <i class="{{spotlightControlIcon}}" aria-hidden="true"></i>
+      {{localize "CTM.Help.OpenWindow"}}
+    </button>
+  </header>
+
+  <section class="ctm-help-section ctm-help-opening" aria-labelledby="ctm-help-open-heading">
+    <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-location-arrow"></i></div>
+    <div>
+      <h2 id="ctm-help-open-heading">{{localize "CTM.Help.Opening.Title"}}</h2>
+      <p>{{localize "CTM.Help.Opening.Body"}}</p>
+      <div class="ctm-control-path ctm-help-path">
+        <span><i class="{{tokenControlsIcon}}" aria-hidden="true"></i>{{localize "CTM.Help.Opening.Controls"}}</span>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        <span><i class="{{spotlightControlIcon}}" aria-hidden="true"></i>{{localize "CTM.Help.Opening.Button"}}</span>
+      </div>
+      <p class="ctm-help-note">{{localize "CTM.Help.Opening.AutoOpen"}}</p>
+      <p class="ctm-help-note">{{localize "CTM.Help.Opening.Keybindings"}}</p>
+    </div>
+  </section>
+
+  <section class="ctm-help-section" aria-labelledby="ctm-help-welcome-heading">
+    <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-door-open"></i></div>
+    <div>
+      <h2 id="ctm-help-welcome-heading">{{localize "CTM.Help.Welcome.Title"}}</h2>
+      <p id="ctm-help-welcome-description">{{localize "CTM.Help.Welcome.Body"}}</p>
+      <label class="ctm-help-preference">
+        <input
+          type="checkbox"
+          name="showWelcomeOnLogin"
+          aria-describedby="ctm-help-welcome-description"
+          {{checked showWelcomeOnLogin}}
+        >
+        <span>{{localize "CTM.Help.Welcome.Toggle"}}</span>
+      </label>
+    </div>
+  </section>
+
+  {{#if isGM}}
+    <section class="ctm-help-section" aria-labelledby="ctm-help-quick-heading">
+      <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-masks-theater"></i></div>
+      <div>
+        <h2 id="ctm-help-quick-heading">{{localize "CTM.Help.GM.Title"}}</h2>
+        <ol>
+          <li>{{localize "CTM.Help.GM.StepOne"}}</li>
+          <li>{{localize "CTM.Help.GM.StepTwo"}}</li>
+          <li>{{localize "CTM.Help.GM.StepThree"}}</li>
+          <li>{{localize "CTM.Help.GM.StepFour"}}</li>
+        </ol>
+      </div>
+    </section>
+  {{else}}
+    <section class="ctm-help-section" aria-labelledby="ctm-help-quick-heading">
+      <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-hand-sparkles"></i></div>
+      <div>
+        <h2 id="ctm-help-quick-heading">{{localize "CTM.Help.Player.Title"}}</h2>
+        <ol>
+          <li>{{localize "CTM.Help.Player.StepOne"}}</li>
+          <li>{{localize "CTM.Help.Player.StepTwo"}}</li>
+          <li>{{localize "CTM.Help.Player.StepThree"}}</li>
+        </ol>
+      </div>
+    </section>
+  {{/if}}
+
+  <section class="ctm-help-section" aria-labelledby="ctm-help-fairness-heading">
+    <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></div>
+    <div>
+      <h2 id="ctm-help-fairness-heading">{{localize "CTM.Help.Fairness.Title"}}</h2>
+      <p>{{localize "CTM.Help.Fairness.Body"}}</p>
+    </div>
+  </section>
+
+  <section class="ctm-help-section" aria-labelledby="ctm-help-volume-heading">
+    <div class="ctm-help-section-icon" aria-hidden="true"><i class="fa-solid fa-volume-high"></i></div>
+    <div>
+      <h2 id="ctm-help-volume-heading">{{localize "CTM.Help.Volume.Title"}}</h2>
+      <p>{{localize "CTM.Help.Volume.Body"}}</p>
+    </div>
+  </section>
+
+  <footer class="ctm-help-resources">
+    <div class="ctm-help-resource-row">
+      <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+      <span>{{localize "CTM.Help.FullGuide"}}</span>
+      <a href="{{guideUrl}}" target="_blank" rel="noopener">{{localize "CTM.Help.ReadOnline"}}</a>
+    </div>
+    <button type="button" class="ctm-help-credit-link" data-action="openCredits">
+      <i class="fa-solid fa-copyright" aria-hidden="true"></i>
+      <span>{{localize "CTM.Help.Credits"}}</span>
+    </button>
+  </footer>
+</article>

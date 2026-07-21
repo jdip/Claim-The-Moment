@@ -15,11 +15,11 @@ import {
   GM_TAKE_SOUND_ENABLED_SETTING,
   GM_TAKE_SOUND_PATH_SETTING,
   MODULE_ID,
-  MUTE_SOUNDS_SETTING,
   PLAYER_CLAIM_SOUND_ENABLED_SETTING,
   PLAYER_CLAIM_SOUND_PATH_SETTING,
   REQUEST,
   ROUND_STATUS,
+  SHOW_WELCOME_SETTING,
   SOUND_ENABLED_SETTING,
   SOUND_PATH_SETTING,
   SOUND_VOLUME_SETTING,
@@ -44,6 +44,15 @@ class StubApplicationV2 {
   render(options = {}) {
     this.rendered = true;
     this.lastRenderOptions = options;
+    return this;
+  }
+
+  async close(options = {}) {
+    await this._preClose(options);
+    this.rendered = false;
+    this.closed = true;
+    this._onClose(options);
+    return this;
   }
 
   async _prepareContext() {
@@ -52,6 +61,7 @@ class StubApplicationV2 {
 
   _attachPartListeners() {}
   async _onRender() {}
+  async _preClose() {}
   _onClose() {}
 }
 
@@ -65,12 +75,18 @@ globalThis.foundry = {
   applications: {
     api: {
       ApplicationV2: StubApplicationV2,
-      DialogV2: { confirm: async () => true },
+      DialogV2: {
+        confirm: async () => true,
+        wait: async () => null
+      },
       HandlebarsApplicationMixin: (Base) => class extends Base {}
     }
   },
   utils: {
-    randomID: () => "round-from-test"
+    randomID: (() => {
+      let sequence = 0;
+      return () => `round-from-test-${++sequence}`;
+    })()
   }
 };
 
@@ -88,6 +104,8 @@ const { SpotlightController } = await import("../scripts/spotlight-controller.mj
 function createHarness(initialState = createInitialState(), {
   deferSettingCache = false,
   deferSettingWrite = false,
+  deferWelcomeSettingWrite = false,
+  rejectSettingWrite = false,
   soundEnabled = true,
   soundPath = DEFAULT_ALERT_SOUND_PATH,
   playerClaimSoundEnabled = true,
@@ -97,8 +115,8 @@ function createHarness(initialState = createInitialState(), {
   gmTakeSoundEnabled = true,
   gmTakeSoundPath = DEFAULT_GM_TAKE_SOUND_PATH,
   gmIconPath = DEFAULT_GM_ICON_PATH,
-  soundsMuted = false,
-  soundVolume = 80
+  soundVolume = 80,
+  showWelcomeOnLogin = true
 } = {}) {
   const createUser = (data) => ({
     ...data,
@@ -120,14 +138,19 @@ function createHarness(initialState = createInitialState(), {
 
   let cachedState = initialState;
   let savedState = initialState;
-  let savedSoundsMuted = soundsMuted;
   let savedSoundVolume = soundVolume;
+  let savedShowWelcomeOnLogin = showWelcomeOnLogin;
   let serverTime = 1_000;
   const emitted = [];
+  const socketHandlers = new Map();
   const playedSounds = [];
   let releaseSettingWrite;
   const settingWriteGate = new Promise((resolve) => {
     releaseSettingWrite = resolve;
+  });
+  let releaseWelcomeSettingWrite;
+  const welcomeSettingWriteGate = new Promise((resolve) => {
+    releaseWelcomeSettingWrite = resolve;
   });
 
   globalThis.foundry.audio.AudioHelper.play = (data, socketOptions) => {
@@ -156,22 +179,24 @@ function createHarness(initialState = createInitialState(), {
         if (key === GM_TAKE_SOUND_ENABLED_SETTING) return gmTakeSoundEnabled;
         if (key === GM_TAKE_SOUND_PATH_SETTING) return gmTakeSoundPath;
         if (key === GM_ICON_SETTING) return gmIconPath;
-        if (key === MUTE_SOUNDS_SETTING) return savedSoundsMuted;
         if (key === SOUND_VOLUME_SETTING) return savedSoundVolume;
+        if (key === SHOW_WELCOME_SETTING) return savedShowWelcomeOnLogin;
         throw new Error(`Unknown setting ${key}`);
       },
       set: async (namespace, key, value) => {
         assert.equal(namespace, MODULE_ID);
-        if (key === MUTE_SOUNDS_SETTING) {
-          savedSoundsMuted = value === true;
-          return savedSoundsMuted;
-        }
         if (key === SOUND_VOLUME_SETTING) {
           savedSoundVolume = value;
           return savedSoundVolume;
         }
+        if (key === SHOW_WELCOME_SETTING) {
+          if (deferWelcomeSettingWrite) await welcomeSettingWriteGate;
+          savedShowWelcomeOnLogin = value === true;
+          return savedShowWelcomeOnLogin;
+        }
         assert.equal(key, STATE_SETTING);
         if (deferSettingWrite) await settingWriteGate;
+        if (rejectSettingWrite) throw new Error("world setting write failed");
         savedState = value;
         if (!deferSettingCache) cachedState = value;
         return value;
@@ -179,7 +204,10 @@ function createHarness(initialState = createInitialState(), {
     },
     socket: {
       emit: (name, message) => emitted.push({ name, message }),
-      on() {}
+      on: (name, handler) => socketHandlers.set(name, handler),
+      off: (name, handler) => {
+        if (socketHandlers.get(name) === handler) socketHandlers.delete(name);
+      }
     },
     time: {
       get serverTime() {
@@ -193,20 +221,22 @@ function createHarness(initialState = createInitialState(), {
     ada,
     bea,
     emitted,
+    socketHandlers,
     playedSounds,
     get state() {
       return savedState;
     },
-    get soundsMuted() {
-      return savedSoundsMuted;
-    },
     get soundVolume() {
       return savedSoundVolume;
+    },
+    get showWelcomeOnLogin() {
+      return savedShowWelcomeOnLogin;
     },
     set serverTime(value) {
       serverTime = value;
     },
-    releaseSettingWrite
+    releaseSettingWrite,
+    releaseWelcomeSettingWrite
   };
 }
 
@@ -234,6 +264,99 @@ test("serialized claim requests award only the first player", async () => {
   assert.equal(harness.state.counts.bea ?? 0, 0);
   assert.equal(harness.playedSounds.length, 2);
   assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+});
+
+test("the native welcome form persists dismissal on change and can open the spotlight", async () => {
+  const harness = createHarness();
+  const controller = new SpotlightController();
+  const shown = await controller.showWelcomeIfNeeded();
+
+  assert.equal(shown, true);
+  assert.equal(controller.welcomeApp.rendered, true);
+  assert.equal(controller.app.rendered, false);
+
+  await controller.welcomeApp.constructor.onSubmitForm.call(controller.welcomeApp, {
+    target: { name: "skipWelcome", checked: true }
+  });
+  assert.equal(harness.showWelcomeOnLogin, false);
+
+  await controller.welcomeApp.constructor.onOpenSpotlight.call(controller.welcomeApp);
+  assert.equal(controller.app.rendered, true);
+  assert.equal(controller.welcomeApp.rendered, false);
+});
+
+test("Foundry's X waits for a checked welcome preference before closing and reloading", async () => {
+  const harness = createHarness(createInitialState(), { deferWelcomeSettingWrite: true });
+  const controller = new SpotlightController();
+  await controller.showWelcomeIfNeeded();
+
+  const saving = controller.welcomeApp.constructor.onSubmitForm.call(controller.welcomeApp, {
+    target: { name: "skipWelcome", checked: true }
+  });
+  let closed = false;
+  const closing = controller.welcomeApp.close().then(() => {
+    closed = true;
+  });
+  await Promise.resolve();
+
+  assert.equal(closed, false);
+  harness.releaseWelcomeSettingWrite();
+  await Promise.all([saving, closing]);
+  assert.equal(harness.showWelcomeOnLogin, false);
+
+  const reloadedController = new SpotlightController();
+  assert.equal(await reloadedController.showWelcomeIfNeeded(), false);
+  assert.equal(reloadedController.welcomeApp.rendered, false);
+});
+
+test("the welcome prompt stays silent when the user disables it", async () => {
+  createHarness(createInitialState(), { showWelcomeOnLogin: false });
+
+  const controller = new SpotlightController();
+  assert.equal(await controller.showWelcomeIfNeeded(), false);
+  assert.equal(controller.welcomeApp.rendered, false);
+  assert.equal(controller.app.rendered, false);
+});
+
+test("the Help window can restore or suppress the per-user welcome prompt", async () => {
+  const harness = createHarness(createInitialState(), { showWelcomeOnLogin: false });
+  const controller = new SpotlightController();
+
+  assert.equal((await controller.helpApp._prepareContext({})).showWelcomeOnLogin, false);
+  await controller.helpApp.constructor.onSubmitForm.call(controller.helpApp, {
+    target: { name: "showWelcomeOnLogin", checked: true }
+  });
+  assert.equal(harness.showWelcomeOnLogin, true);
+  assert.equal((await controller.helpApp._prepareContext({})).showWelcomeOnLogin, true);
+
+  await controller.helpApp.constructor.onSubmitForm.call(controller.helpApp, {
+    target: { name: "showWelcomeOnLogin", checked: false }
+  });
+  assert.equal(harness.showWelcomeOnLogin, false);
+});
+
+test("GM readiness distinguishes online-but-excluded players from no online players", async () => {
+  let state = setPlayerEligibility(createInitialState(), "ada", false);
+  state = setPlayerEligibility(state, "bea", false);
+  createHarness(state);
+  const excludedController = new SpotlightController();
+  const excludedContext = await excludedController.app._prepareContext({});
+
+  assert.equal(excludedContext.players.length, 2);
+  assert.equal(excludedContext.eligibleCount, 0);
+  assert.equal(excludedContext.canThrow, false);
+  assert.equal(excludedContext.throwDisabledReason, "CTM.Readiness.NoEligiblePlayers");
+
+  const offlineHarness = createHarness();
+  offlineHarness.ada.active = false;
+  offlineHarness.bea.active = false;
+  const offlineController = new SpotlightController();
+  const offlineContext = await offlineController.app._prepareContext({});
+
+  assert.equal(offlineContext.players.length, 0);
+  assert.equal(offlineContext.eligibleCount, 0);
+  assert.equal(offlineContext.canThrow, false);
+  assert.equal(offlineContext.throwDisabledReason, "CTM.Readiness.NoOnlinePlayers");
 });
 
 test("an excluded player cannot claim", async () => {
@@ -371,15 +494,67 @@ test("the registered ApplicationV2 toggle action persists the unchecked state", 
   assert.equal(target.disabled, true, "the setting update rerenders the row instead of reusing the clicked input");
 });
 
-test("a legacy mute preference migrates to zero module volume", async () => {
-  const harness = createHarness(createInitialState(), { soundsMuted: true, soundVolume: 80 });
+test("pending UI actions restore controls after false results and exceptions", async () => {
+  createHarness();
+  const attributes = new Set();
+  const target = {
+    disabled: false,
+    isConnected: true,
+    setAttribute: (name) => attributes.add(name),
+    removeAttribute: (name) => attributes.delete(name)
+  };
+  let restored = 0;
+
+  assert.equal(await SpotlightApp.runPendingAction(target, async () => false, {
+    busy: true,
+    onFailure: () => { restored += 1; }
+  }), false);
+  assert.equal(target.disabled, false);
+  assert.equal(attributes.has("aria-busy"), false);
+
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    assert.equal(await SpotlightApp.runPendingAction(target, async () => {
+      throw new Error("action failed");
+    }, {
+      busy: true,
+      onFailure: () => { restored += 1; }
+    }), false);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(target.disabled, false);
+  assert.equal(attributes.has("aria-busy"), false);
+  assert.equal(restored, 2);
+});
+
+test("failed welcome preferences revert both checkboxes and never trap window close", async () => {
+  createHarness(createInitialState(), { showWelcomeOnLogin: false });
   const controller = new SpotlightController();
+  game.settings.set = async (_namespace, key) => {
+    if (key === SHOW_WELCOME_SETTING) throw new Error("preference unavailable");
+    throw new Error(`Unexpected setting ${key}`);
+  };
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const helpTarget = { name: "showWelcomeOnLogin", checked: true };
+    assert.equal(await controller.helpApp.constructor.onSubmitForm.call(controller.helpApp, {
+      target: helpTarget
+    }), false);
+    assert.equal(helpTarget.checked, false);
+    await controller.helpApp.close();
 
-  assert.equal(await controller._migrateLegacyMute(), true);
-
-  assert.equal(harness.soundsMuted, false);
-  assert.equal(harness.soundVolume, 0);
-  assert.equal(controller.soundVolume, 0);
+    const welcomeTarget = { name: "skipWelcome", checked: true };
+    assert.equal(await controller.welcomeApp.constructor.onSubmitForm.call(controller.welcomeApp, {
+      target: welcomeTarget
+    }), false);
+    assert.equal(welcomeTarget.checked, false);
+    await controller.welcomeApp.close();
+  } finally {
+    console.error = originalError;
+  }
 });
 
 test("the streamlined sound widget persists a personal module volume", async () => {
@@ -425,7 +600,7 @@ test("the registered ApplicationV2 form handler persists a manual claim-count ed
 test("a world Setting change immediately updates a player client's authoritative view", () => {
   const harness = createHarness();
   const controller = new SpotlightController();
-  controller._state = createInitialState();
+  controller.stateStore.snapshot = createInitialState();
   controller.app.rendered = true;
   game.user = harness.ada;
 
@@ -440,7 +615,7 @@ test("every client resorts the roster from lowest to highest when claim counts c
   state = setPlayerCount(state, "bea", 1);
   const harness = createHarness(state);
   const controller = new SpotlightController();
-  controller._state = state;
+  controller.stateStore.snapshot = state;
   controller.app.rendered = true;
   game.user = harness.ada;
 
@@ -457,13 +632,26 @@ test("every client resorts the roster from lowest to highest when claim counts c
 test("a non-authority GM waits for the world Setting instead of rendering stale state", async () => {
   const harness = createHarness();
   const controller = new SpotlightController();
-  controller._state = createInitialState();
+  controller.stateStore.snapshot = createInitialState();
   controller.app.rendered = true;
-  controller._recordGMClient(harness.gm.id, "000-authority-client");
+  controller.authority.record(harness.gm.id, "000-authority-client");
 
-  assert.equal(await controller.requestEligibility(harness.ada.id, false), true);
+  const requested = controller.requestEligibility(harness.ada.id, false);
+  await Promise.resolve();
   assert.equal(controller.state.eligible.ada, undefined, "the request does not invent an optimistic second authority");
   assert.equal(harness.emitted.at(-1).message.command, REQUEST.SET_ELIGIBLE);
+
+  const request = harness.emitted.at(-1).message;
+  controller.receiveSocket({
+    command: REQUEST.RESULT,
+    requestId: request.requestId,
+    recipientId: harness.gm.id,
+    recipientClientId: controller.clientId,
+    responderId: harness.gm.id,
+    responderClientId: "000-authority-client",
+    ok: true
+  });
+  assert.equal(await requested, true);
 
   controller.onStateChanged(setPlayerEligibility(createInitialState(), harness.ada.id, false));
   assert.equal(controller.state.eligible.ada, false);
@@ -474,7 +662,7 @@ test("an excluded player does not auto-open when the GM throws the spotlight", (
   const harness = createHarness();
   game.user = harness.ada;
   const controller = new SpotlightController();
-  controller._state = setPlayerEligibility(createInitialState(), harness.ada.id, false);
+  controller.stateStore.snapshot = setPlayerEligibility(createInitialState(), harness.ada.id, false);
 
   const open = startRound(controller.state, {
     roundId: "excluded-auto-open",
@@ -490,7 +678,7 @@ test("an eligible player still auto-opens when the GM throws the spotlight", () 
   const harness = createHarness();
   game.user = harness.bea;
   const controller = new SpotlightController();
-  controller._state = createInitialState();
+  controller.stateStore.snapshot = createInitialState();
 
   const open = startRound(createInitialState(), {
     roundId: "eligible-auto-open",
@@ -557,6 +745,27 @@ test("the GM can hand the spotlight directly to an eligible player", async () =>
   assert.equal(harness.state.round.winnerId, harness.ada.id);
   assert.equal(harness.state.counts.ada, 1);
   assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+});
+
+test("a retried handoff remains idempotent after GM authority moves to another controller", async () => {
+  const harness = createHarness();
+  const request = {
+    command: REQUEST.HAND_SPOTLIGHT,
+    requestId: "handoff-survives-turnover",
+    senderId: harness.gm.id,
+    senderClientId: "originating-gm-tab",
+    userId: harness.ada.id
+  };
+
+  const firstAuthority = new SpotlightController();
+  assert.equal(await firstAuthority._processRequest(request), true);
+  assert.equal(harness.state.counts.ada, 1);
+  assert.equal(harness.playedSounds.length, 1);
+
+  const successorAuthority = new SpotlightController();
+  assert.equal(await successorAuthority._processRequest(request), true);
+  assert.equal(harness.state.counts.ada, 1, "the persisted request id prevents a second increment");
+  assert.equal(harness.playedSounds.length, 1, "the committed cue is not replayed");
 });
 
 test("direct spotlight handoff requires an eligible online player and a GM sender", async () => {
@@ -707,10 +916,10 @@ test("the player claim horn uses the configured audio file", async () => {
   assert.equal(harness.playedSounds.at(-1).data.src, "worlds/test/custom-heroic-horn.ogg");
 });
 
-test("the player claim horn starts before the world Setting write finishes", async () => {
+test("the player claim horn waits until the world Setting write commits", async () => {
   const harness = createHarness(createInitialState(), { deferSettingWrite: true });
   const controller = new SpotlightController();
-  controller._state = startRound(createInitialState(), {
+  controller.stateStore.snapshot = startRound(createInitialState(), {
     roundId: "immediate-audio",
     startedAt: 1_000,
     durationMs: 10_000
@@ -727,10 +936,28 @@ test("the player claim horn starts before the world Setting write finishes", asy
 
   await Promise.resolve();
   assert.equal(settled, false);
-  assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+  assert.equal(harness.playedSounds.length, 0);
 
   harness.releaseSettingWrite();
   assert.equal(await claim, true);
+  assert.equal(harness.playedSounds.at(-1).data.src, DEFAULT_PLAYER_CLAIM_SOUND_PATH);
+});
+
+test("a rejected world Setting produces no winner state or shared audio", async () => {
+  const harness = createHarness(createInitialState(), { rejectSettingWrite: true });
+  const controller = new SpotlightController();
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    assert.equal(await controller.requestStart(), false);
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(controller.state.round.status, ROUND_STATUS.IDLE);
+  assert.equal(harness.state.round.status, ROUND_STATUS.IDLE);
+  assert.equal(harness.playedSounds.length, 0);
+  assert.equal(harness.emitted.length, 0);
 });
 
 test("a zero-volume GM still broadcasts configured cues without hearing them locally", async () => {
@@ -745,7 +972,7 @@ test("a zero-volume GM still broadcasts configured cues without hearing them loc
   assert.equal(harness.playedSounds.length, 0);
   assert.equal(harness.emitted.length, 1);
   assert.equal(harness.emitted[0].message.command, REQUEST.PLAY_SOUND);
-  assert.equal(harness.emitted[0].message.src, DEFAULT_ALERT_SOUND_PATH);
+  assert.equal(harness.emitted[0].message.cueKey, "throw");
 });
 
 test("a zero-volume player suppresses received Claim the Moment cues", () => {
@@ -758,8 +985,7 @@ test("a zero-volume player suppresses received Claim the Moment cues", () => {
     soundId: "muted-received-sound",
     senderId: harness.gm.id,
     senderClientId: "remote-gm-client",
-    src: DEFAULT_PLAYER_CLAIM_SOUND_PATH,
-    description: "player spotlight claim"
+    cueKey: "player"
   });
 
   assert.equal(harness.playedSounds.length, 0);
@@ -775,8 +1001,7 @@ test("a positive-volume player plays a received Claim the Moment cue locally onl
     soundId: "unmuted-received-sound",
     senderId: harness.gm.id,
     senderClientId: "remote-gm-client",
-    src: DEFAULT_PLAYER_CLAIM_SOUND_PATH,
-    description: "player spotlight claim"
+    cueKey: "player"
   });
 
   assert.equal(harness.playedSounds.length, 1);
@@ -815,7 +1040,7 @@ test("the automatic selection cue uses the configured audio file", async () => {
   assert.equal(harness.playedSounds[0].data.src, "worlds/test/custom-automatic-selection.ogg");
 });
 
-test("the automatic selection cue starts before the world Setting write finishes", async () => {
+test("the automatic selection cue waits until the world Setting write commits", async () => {
   const state = startRound(createInitialState(), {
     roundId: "automatic-immediate-audio",
     startedAt: 1_000,
@@ -832,10 +1057,11 @@ test("the automatic selection cue starts before the world Setting write finishes
 
   await Promise.resolve();
   assert.equal(settled, false);
-  assert.equal(harness.playedSounds[0].data.src, DEFAULT_AUTO_SELECT_SOUND_PATH);
+  assert.equal(harness.playedSounds.length, 0);
 
   harness.releaseSettingWrite();
   assert.equal(await resolving, true);
+  assert.equal(harness.playedSounds[0].data.src, DEFAULT_AUTO_SELECT_SOUND_PATH);
 });
 
 test("the GM can disable the GM danger horn", async () => {
@@ -854,4 +1080,37 @@ test("the GM danger horn uses the configured audio file", async () => {
 
   await controller._processRequest({ command: REQUEST.TAKE, senderId: harness.gm.id });
   assert.equal(harness.playedSounds[0].data.src, "worlds/test/custom-danger-horn.ogg");
+});
+
+test("login during an open eligible round suppresses welcome onboarding", async () => {
+  const open = startRound(createInitialState(), {
+    roundId: "already-open",
+    startedAt: 1_000,
+    durationMs: 10_000
+  });
+  const harness = createHarness(open, { showWelcomeOnLogin: true });
+  game.user = harness.ada;
+  const controller = new SpotlightController();
+
+  await controller.initialize();
+  assert.equal(controller.app.rendered, true);
+  assert.equal(await controller.showWelcomeIfNeeded(), false);
+  assert.equal(controller.welcomeApp.rendered, false);
+  controller.dispose();
+});
+
+test("controller disposal removes socket presence and deadline resources", async () => {
+  const harness = createHarness();
+  const controller = new SpotlightController();
+
+  await controller.initialize();
+  assert.equal(harness.socketHandlers.get(SOCKET_NAME), controller.receiveSocket);
+  assert.notEqual(controller.authority.presenceTimer, null);
+
+  controller.dispose();
+  assert.equal(controller.initialized, false);
+  assert.equal(harness.socketHandlers.has(SOCKET_NAME), false);
+  assert.equal(controller.authority.presenceTimer, null);
+  assert.equal(controller.authority.settleTimer, null);
+  assert.equal(controller.deadlineTimer, null);
 });

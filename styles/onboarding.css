@@ -1,0 +1,355 @@
+.claim-the-moment.ctm-help-app .window-content,
+.claim-the-moment.ctm-credits-app .window-content {
+  padding: 18px 20px;
+}
+
+.ctm-help,
+.ctm-credits {
+  min-width: 0;
+  padding: 0;
+  color: var(--ctm-ink);
+}
+
+.ctm-help-intro,
+.ctm-credits-intro {
+  padding: 4px 2px 18px;
+  border-bottom: 1px solid var(--ctm-line);
+}
+
+.ctm-help-intro {
+  padding-bottom: 20px;
+}
+
+.ctm-help-intro h1,
+.ctm-credits-intro h1 {
+  margin: 2px 0 8px;
+  color: var(--ctm-ink);
+  font-family: var(--font-h1, "Modesto Condensed", serif);
+  font-size: 32px;
+  line-height: 1.05;
+}
+
+.ctm-help-intro > p:not(.ctm-eyebrow),
+.ctm-credits-intro > p:not(.ctm-eyebrow) {
+  margin: 0;
+  color: var(--ctm-muted);
+  line-height: 1.45;
+}
+
+.ctm-help-intro > p:not(.ctm-eyebrow) {
+  max-width: 54ch;
+}
+
+.ctm-credits-intro > p:not(.ctm-eyebrow) {
+  max-width: 58ch;
+}
+
+.ctm-help-open {
+  width: auto;
+  margin-top: 16px;
+  padding-inline: 16px;
+}
+
+.ctm-help-section {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  padding: 18px 2px;
+  border-bottom: 1px solid var(--ctm-line);
+}
+
+.ctm-help-section-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--ctm-gold-bright);
+  border: 1px solid rgba(240, 197, 106, 0.25);
+  border-radius: 50%;
+  background: rgba(240, 197, 106, 0.06);
+}
+
+.ctm-help-section h2 {
+  margin: 0 0 7px;
+  color: var(--ctm-ink);
+  font-family: var(--font-h1, "Modesto Condensed", serif);
+  font-size: 21px;
+}
+
+.ctm-help-section p,
+.ctm-help-section ol {
+  margin: 0;
+  color: var(--ctm-muted);
+  line-height: 1.45;
+}
+
+.ctm-help-section ol {
+  padding-left: 20px;
+}
+
+.ctm-help-section li + li {
+  margin-top: 6px;
+}
+
+.ctm-control-path {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ctm-control-path span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctm-control-path span > i {
+  width: 16px;
+  text-align: center;
+}
+
+.ctm-help-path {
+  margin-top: 12px;
+  color: var(--ctm-gold-bright);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ctm-help-note {
+  margin-top: 10px !important;
+  font-size: 11px;
+}
+
+.ctm-help-preference {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  color: var(--ctm-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  border: 1px solid rgba(240, 197, 106, 0.22);
+  border-radius: 6px;
+  background: rgba(240, 197, 106, 0.05);
+}
+
+.ctm-help-preference input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.ctm-help-resources {
+  display: grid;
+  gap: 10px;
+  padding: 18px 2px 4px;
+  color: var(--ctm-muted);
+  font-size: 11px;
+}
+
+.ctm-help-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctm-help-resources a {
+  color: var(--ctm-gold-bright);
+}
+
+.ctm-help-credit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  width: max-content;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  color: var(--ctm-gold-bright);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ctm-help-credit-link:hover,
+.ctm-help-credit-link:focus-visible {
+  color: var(--ctm-ink);
+  background: transparent;
+  box-shadow: none;
+}
+
+.ctm-credits-intro .ctm-credits-no-ai {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--ctm-gold-bright);
+  font-size: 11px;
+}
+
+.ctm-credits-section {
+  padding: 18px 2px;
+  border-bottom: 1px solid var(--ctm-line);
+}
+
+.ctm-credits-section > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--ctm-ink);
+  font-family: var(--font-h1, "Modesto Condensed", serif);
+  font-size: 22px;
+}
+
+.ctm-credits-section > h2 i {
+  color: var(--ctm-gold-bright);
+  font-size: 15px;
+}
+
+.ctm-credit-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ctm-credit-card {
+  padding: 12px 14px;
+  border: 1px solid var(--ctm-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.ctm-credit-card h3 {
+  margin: 2px 0 6px;
+  font-size: 14px;
+}
+
+.ctm-credit-card a,
+.ctm-credits-footer a {
+  color: var(--ctm-gold-bright);
+}
+
+.ctm-credit-file {
+  margin: 0;
+  color: var(--ctm-muted);
+  font-family: monospace;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.ctm-credit-attribution,
+.ctm-credit-note {
+  margin: 0;
+  color: var(--ctm-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.ctm-credit-note {
+  margin-top: 6px;
+  color: var(--ctm-ink);
+}
+
+.ctm-credits-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 2px 4px;
+  color: var(--ctm-muted);
+  font-size: 11px;
+}
+
+.claim-the-moment.ctm-onboarding-dialog .window-content {
+  padding: 16px 18px;
+}
+
+.ctm-onboarding-frame {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.ctm-onboarding {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  color: var(--ctm-ink);
+}
+
+.ctm-onboarding p {
+  margin: 0;
+  color: var(--ctm-muted);
+  line-height: 1.45;
+}
+
+.ctm-onboarding .ctm-onboarding-lead {
+  color: var(--ctm-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ctm-onboarding-path {
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  color: var(--ctm-gold-bright);
+  border: 1px solid rgba(240, 197, 106, 0.25);
+  border-radius: 6px;
+  background: rgba(240, 197, 106, 0.06);
+}
+
+.ctm-onboarding-path span > i {
+  width: 22px;
+  font-size: 18px;
+}
+
+.ctm-onboarding-path > i {
+  font-size: 11px;
+}
+
+.ctm-onboarding-skip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ctm-muted);
+  font-size: 11px;
+}
+
+.ctm-onboarding-skip input {
+  margin: 0;
+}
+
+.claim-the-moment.ctm-onboarding-dialog .ctm-onboarding-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 16px 0 0;
+}
+
+.claim-the-moment.ctm-onboarding-dialog .ctm-onboarding-actions > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  margin: 0;
+}
+
+@container ctm-window (max-width: 420px) {
+  .claim-the-moment.ctm-onboarding-dialog .ctm-onboarding-actions { grid-template-columns: 1fr; }
+  .ctm-help-path { align-items: flex-start; flex-direction: column; }
+  .ctm-help-path > i { display: none; }
+  .ctm-help-resource-row,
+  .ctm-credits-footer { align-items: flex-start; flex-direction: column; }
+}

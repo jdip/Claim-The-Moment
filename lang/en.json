@@ -6,6 +6,16 @@
     "Controls": {
       "Open": "Open Claim the Moment"
     },
+    "Keybindings": {
+      "Open": {
+        "Name": "Open Claim the Moment",
+        "Hint": "Open or bring forward the shared Claim the Moment window."
+      },
+      "Claim": {
+        "Name": "Claim the Spotlight",
+        "Hint": "Claim an open spotlight when you are an eligible player."
+      }
+    },
     "Settings": {
       "State": {
         "Name": "Spotlight State",
@@ -51,17 +61,18 @@
         "Name": "GM Spotlight Icon",
         "Hint": "Choose or upload the image shown when the GM takes the spotlight."
       },
-      "MuteSounds": {
-        "Name": "Mute Claim the Moment Sounds",
-        "Hint": "Your personal mute preference for this world."
-      },
       "SoundVolume": {
         "Name": "Claim the Moment Volume",
         "Hint": "Your personal Claim the Moment playback volume for this world."
+      },
+      "ShowWelcome": {
+        "Name": "Show Welcome on Login",
+        "Hint": "Show the Claim the Moment quick-start message when you enter this world."
       }
     },
     "Status": {
       "Seconds": "seconds",
+      "CountdownAnnouncement": "{seconds} seconds remaining to claim the spotlight.",
       "OpenKicker": "The moment is open",
       "Open": "Who will claim it?",
       "OpenHint": "The first eligible player to claim wins the spotlight.",
@@ -80,7 +91,6 @@
     "Actions": {
       "ThrowSpotlight": "Throw the Spotlight",
       "CountdownInProgress": "Countdown in Progress",
-      "ThrowHint": "Players' windows open automatically when the countdown begins.",
       "TakeSpotlight": "Take the Spotlight",
       "GMActionHint": "Throw it to the players, or take it immediately to move the scene forward.",
       "ClaimSpotlight": "Claim the Spotlight",
@@ -89,37 +99,127 @@
       "ClaimHint": "Only the first eligible claim is counted.",
       "SoundControls": "Claim the Moment sound controls",
       "SoundVolume": "Claim the Moment volume",
+      "Help": "How to use Claim the Moment",
       "ResetCounts": "Reset All"
     },
     "Roster": {
       "Eyebrow": "At the table",
       "Title": "Online Players",
       "Online": "online",
+      "Eligible": "eligible",
       "In": "In?",
       "Player": "Player",
       "Claims": "Claims",
       "Hand": "Give",
-      "HandSpotlight": "Hand the spotlight directly to this player",
-      "Toggle": "Toggle spotlight contention",
-      "ToggleTooltip": "Include or exclude this player from the spotlight",
+      "HandSpotlightTo": "Hand the spotlight directly to {name}",
+      "ToggleFor": "Set spotlight contention for {name}",
+      "ClaimsFor": "Spotlight claims for {name}",
       "InContention": "In contention",
       "OutOfContention": "Out of contention",
-      "Empty": "No players are currently online."
+      "EmptyGM": "No players are online yet. Ask a player to join this world, then bring them into contention.",
+      "EmptyPlayer": "No players are currently online."
+    },
+    "Readiness": {
+      "NoOnlinePlayers": "Throw is unavailable because no players are online.",
+      "NoEligiblePlayers": "Throw is unavailable because every online player is out of contention.",
+      "EnablePlayer": "Nobody is in contention. Turn on at least one player toggle before throwing the spotlight.",
+      "WaitForGM": "Nobody is currently in contention. The GM can bring players into the next spotlight throw."
     },
     "GMTools": {
       "Title": "GM controls",
-      "Hint": "Set contention, edit a total directly, or reset every player to zero."
+      "Hint": "Set contention, edit totals, or reset all."
     },
     "Reset": {
       "Title": "Reset Spotlight Claims",
       "Confirm": "Reset every player's spotlight claim total to zero? This cannot be undone."
     },
+    "Help": {
+      "Title": "Claim the Moment Help",
+      "Eyebrow": "At the table",
+      "Heading": "Pass the spotlight with purpose",
+      "Intro": "Claim the Moment gives everyone a clear way to see, offer, claim, and balance narrative focus.",
+      "OpenWindow": "Open Claim the Moment",
+      "Opening": {
+        "Title": "Where to find it",
+        "Body": "Every GM and player can open the window from Foundry's scene-controls bar on the left.",
+        "Controls": "Token Controls",
+        "Button": "Claim the Moment button",
+        "AutoOpen": "When the GM throws the spotlight, the window also opens automatically for every eligible online player.",
+        "Keybindings": "Defaults: Shift+M opens the window and Shift+C claims an available spotlight. Change either under Configure Controls."
+      },
+      "Welcome": {
+        "Title": "Welcome reminder",
+        "Body": "The welcome window explains how to open Claim the Moment when you enter this world. If you previously selected Don't show this again, you can restore it here.",
+        "Toggle": "Show welcome window on login"
+      },
+      "GM": {
+        "Title": "GM quick start",
+        "StepOne": "Set each online player's contention toggle.",
+        "StepTwo": "Throw the spotlight to start the shared countdown, or take it immediately for the GM.",
+        "StepThree": "Use the hand button to give the spotlight directly to an eligible player.",
+        "StepFour": "Correct totals directly when needed; use Reset All only when beginning a fresh count."
+      },
+      "Player": {
+        "Title": "Player quick start",
+        "StepOne": "Check whether your roster row is in contention or greyed out.",
+        "StepTwo": "When the moment opens, select Claim the Spotlight before the countdown ends.",
+        "StepThree": "If nobody claims, the fairest eligible player is selected automatically."
+      },
+      "Fairness": {
+        "Title": "How the fallback works",
+        "Body": "The system chooses among eligible online players with the lowest spotlight total and breaks ties randomly. The previous player winner is skipped by the next automatic fallback, but can still claim manually."
+      },
+      "Volume": {
+        "Title": "Your sound, your choice",
+        "Body": "The sound button in the bottom-right controls only your Claim the Moment volume. Taking it to zero silences the module for you without affecting the table."
+      },
+      "FullGuide": "Need the complete rules, settings, and troubleshooting guide?",
+      "ReadOnline": "Read the full user guide",
+      "Credits": "Credits & licenses"
+    },
+    "Credits": {
+      "Title": "Claim the Moment Credits & Licenses",
+      "Eyebrow": "Third-party assets",
+      "Heading": "Credits & licenses",
+      "Intro": "Claim the Moment gratefully uses the following openly licensed artwork and audio. Each credit links to its original source and license.",
+      "NoAI": "Claim the Moment did not use generative AI to create or adapt any bundled asset.",
+      "Artwork": "Artwork",
+      "Sounds": "Audio",
+      "By": "By",
+      "Via": "via",
+      "LicensedUnder": "Licensed under",
+      "Roles": {
+        "Throw": "Throw alert",
+        "PlayerClaim": "Player claim cue",
+        "Automatic": "Automatic-selection cue",
+        "GMTake": "GM take cue"
+      },
+      "Notes": {
+        "GMIcon": "Adapted with a pale lavender foreground on a dark purple background; the PNG is a rasterization of the recolored SVG.",
+        "Unchanged": "Used unchanged.",
+        "UnchangedPreview": "Used as the unchanged published high-quality preview.",
+        "GMTake": "Adapted by removing 1.137 seconds of leading silence and re-encoding as MP3; no other creative changes were made."
+      },
+      "Packaged": "A complete attribution document is also included with every module installation.",
+      "ReadDocument": "Read ATTRIBUTIONS.md"
+    },
+    "Onboarding": {
+      "Title": "Welcome to Claim the Moment",
+      "Intro": "Claim the Moment is ready for this world.",
+      "OpenPath": "Open Token Controls on the left, then select the Claim the Moment button whenever you need the spotlight window.",
+      "GMBody": "Set who is in contention, then throw the spotlight to open a countdown for eligible players.",
+      "PlayerBody": "When you are in contention, the window opens automatically when the GM throws the spotlight—but you can open it manually at any time.",
+      "DontShowAgain": "Don't show this again",
+      "OpenWindow": "Open Claim the Moment",
+      "NotNow": "Not now"
+    },
     "Notifications": {
       "GMRequired": "An active GM is required to manage the spotlight.",
-      "NoEligiblePlayers": "At least one eligible player must be online before throwing the spotlight.",
       "NoEligibleAtDeadline": "The countdown ended with no eligible players online.",
       "Awarded": "The spotlight belongs to {name}.",
-      "OperationFailed": "Claim the Moment could not complete that action. Check the console for details."
+      "OperationFailed": "Claim the Moment could not complete that action. Check the console for details.",
+      "RequestTimedOut": "Claim the Moment did not receive a response from the GM. Try again.",
+      "InitializationFailed": "Claim the Moment could not initialize. Reload the world or check the console for details."
     },
     "Player": {
       "Unknown": "Unknown Player"

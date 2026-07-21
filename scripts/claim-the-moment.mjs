@@ -1,22 +1,13 @@
 import {
-  AUTO_SELECT_SOUND_ENABLED_SETTING,
-  AUTO_SELECT_SOUND_PATH_SETTING,
   COUNTDOWN_SETTING,
-  DEFAULT_ALERT_SOUND_PATH,
-  DEFAULT_AUTO_SELECT_SOUND_PATH,
-  DEFAULT_GM_TAKE_SOUND_PATH,
   DEFAULT_GM_ICON_PATH,
-  DEFAULT_PLAYER_CLAIM_SOUND_PATH,
   GM_ICON_SETTING,
-  GM_TAKE_SOUND_ENABLED_SETTING,
-  GM_TAKE_SOUND_PATH_SETTING,
   MODULE_ID,
-  MUTE_SOUNDS_SETTING,
-  PLAYER_CLAIM_SOUND_ENABLED_SETTING,
-  PLAYER_CLAIM_SOUND_PATH_SETTING,
-  SOUND_ENABLED_SETTING,
-  SOUND_PATH_SETTING,
+  ROUND_STATUS,
+  SHOW_WELCOME_SETTING,
+  SOUND_CUES,
   SOUND_VOLUME_SETTING,
+  SPOTLIGHT_CONTROL_ICON,
   STATE_SETTING
 } from "./constants.mjs";
 import { createInitialState } from "./state.mjs";
@@ -59,89 +50,28 @@ Hooks.once("init", () => {
     }
   });
 
-  game.settings.register(MODULE_ID, SOUND_ENABLED_SETTING, {
-    name: "CTM.Settings.SoundEnabled.Name",
-    hint: "CTM.Settings.SoundEnabled.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
+  for (const cue of Object.values(SOUND_CUES)) {
+    game.settings.register(MODULE_ID, cue.enabledSetting, {
+      name: cue.enabledName,
+      hint: cue.enabledHint,
+      scope: "world",
+      config: true,
+      type: Boolean,
+      default: true,
+      onChange: () => controller?.onMediaSettingsChanged()
+    });
 
-  game.settings.register(MODULE_ID, SOUND_PATH_SETTING, {
-    name: "CTM.Settings.SoundPath.Name",
-    hint: "CTM.Settings.SoundPath.Hint",
-    scope: "world",
-    config: true,
-    type: new foundry.data.fields.StringField({ nullable: false, blank: true }),
-    default: DEFAULT_ALERT_SOUND_PATH,
-    input: filePickerInput("audio"),
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, PLAYER_CLAIM_SOUND_ENABLED_SETTING, {
-    name: "CTM.Settings.PlayerClaimSoundEnabled.Name",
-    hint: "CTM.Settings.PlayerClaimSoundEnabled.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, PLAYER_CLAIM_SOUND_PATH_SETTING, {
-    name: "CTM.Settings.PlayerClaimSoundPath.Name",
-    hint: "CTM.Settings.PlayerClaimSoundPath.Hint",
-    scope: "world",
-    config: true,
-    type: new foundry.data.fields.StringField({ nullable: false, blank: true }),
-    default: DEFAULT_PLAYER_CLAIM_SOUND_PATH,
-    input: filePickerInput("audio"),
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, AUTO_SELECT_SOUND_ENABLED_SETTING, {
-    name: "CTM.Settings.AutoSelectSoundEnabled.Name",
-    hint: "CTM.Settings.AutoSelectSoundEnabled.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, AUTO_SELECT_SOUND_PATH_SETTING, {
-    name: "CTM.Settings.AutoSelectSoundPath.Name",
-    hint: "CTM.Settings.AutoSelectSoundPath.Hint",
-    scope: "world",
-    config: true,
-    type: new foundry.data.fields.StringField({ nullable: false, blank: true }),
-    default: DEFAULT_AUTO_SELECT_SOUND_PATH,
-    input: filePickerInput("audio"),
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, GM_TAKE_SOUND_ENABLED_SETTING, {
-    name: "CTM.Settings.GMTakeSoundEnabled.Name",
-    hint: "CTM.Settings.GMTakeSoundEnabled.Hint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, GM_TAKE_SOUND_PATH_SETTING, {
-    name: "CTM.Settings.GMTakeSoundPath.Name",
-    hint: "CTM.Settings.GMTakeSoundPath.Hint",
-    scope: "world",
-    config: true,
-    type: new foundry.data.fields.StringField({ nullable: false, blank: true }),
-    default: DEFAULT_GM_TAKE_SOUND_PATH,
-    input: filePickerInput("audio"),
-    onChange: () => controller?.onMediaSettingsChanged()
-  });
+    game.settings.register(MODULE_ID, cue.pathSetting, {
+      name: cue.pathName,
+      hint: cue.pathHint,
+      scope: "world",
+      config: true,
+      type: new foundry.data.fields.StringField({ nullable: false, blank: true }),
+      default: cue.defaultPath,
+      input: filePickerInput("audio"),
+      onChange: () => controller?.onMediaSettingsChanged()
+    });
+  }
 
   game.settings.register(MODULE_ID, GM_ICON_SETTING, {
     name: "CTM.Settings.GMIcon.Name",
@@ -152,15 +82,6 @@ Hooks.once("init", () => {
     default: DEFAULT_GM_ICON_PATH,
     input: filePickerInput("image"),
     onChange: () => controller?.onAppearanceSettingsChanged()
-  });
-
-  game.settings.register(MODULE_ID, MUTE_SOUNDS_SETTING, {
-    name: "CTM.Settings.MuteSounds.Name",
-    hint: "CTM.Settings.MuteSounds.Hint",
-    scope: "user",
-    config: false,
-    type: Boolean,
-    default: false
   });
 
   game.settings.register(MODULE_ID, SOUND_VOLUME_SETTING, {
@@ -177,6 +98,42 @@ Hooks.once("init", () => {
     },
     onChange: () => controller?.onSoundVolumeChanged()
   });
+
+  game.settings.register(MODULE_ID, SHOW_WELCOME_SETTING, {
+    name: "CTM.Settings.ShowWelcome.Name",
+    hint: "CTM.Settings.ShowWelcome.Hint",
+    scope: "user",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.keybindings.register(MODULE_ID, "openWindow", {
+    name: "CTM.Keybindings.Open.Name",
+    hint: "CTM.Keybindings.Open.Hint",
+    editable: [{ key: "KeyM", modifiers: ["Shift"] }],
+    onDown: () => {
+      if (!controller) return false;
+      controller.openWindow();
+      return true;
+    },
+    restricted: false
+  });
+
+  game.keybindings.register(MODULE_ID, "claimSpotlight", {
+    name: "CTM.Keybindings.Claim.Name",
+    hint: "CTM.Keybindings.Claim.Hint",
+    editable: [{ key: "KeyC", modifiers: ["Shift"] }],
+    onDown: () => {
+      if (!controller || game.user.isGM) return false;
+      const state = controller.state;
+      if (state.round.status !== ROUND_STATUS.OPEN) return false;
+      if (!controller.isUserEligible(game.user, state)) return false;
+      void controller.requestClaim(state.round.id);
+      return true;
+    },
+    restricted: false
+  });
 });
 
 Hooks.once("setup", () => {
@@ -186,6 +143,8 @@ Hooks.once("setup", () => {
   if (module) {
     module.api = {
       open: () => controller.openWindow(),
+      help: () => controller.openHelp(),
+      credits: () => controller.openCredits(),
       throwSpotlight: () => controller.requestStart(),
       takeSpotlight: () => controller.requestTake(),
       handSpotlight: (userId) => controller.requestHandSpotlight(userId),
@@ -195,8 +154,14 @@ Hooks.once("setup", () => {
 });
 
 Hooks.once("ready", async () => {
-  await controller.initialize();
-  console.info(`${MODULE_ID} | Ready for Foundry ${game.version} and ${game.system.id} ${game.system.version}`);
+  try {
+    await controller.initialize();
+    await controller.showWelcomeIfNeeded();
+    console.info(`${MODULE_ID} | Ready for Foundry ${game.version} and ${game.system.id} ${game.system.version}`);
+  } catch (error) {
+    console.error(`${MODULE_ID} | Initialization failed`, error);
+    ui.notifications.error(game.i18n.localize("CTM.Notifications.InitializationFailed"));
+  }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -208,7 +173,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
   tokenControls.tools.claimTheMoment = {
     name: "claimTheMoment",
     title: "CTM.Controls.Open",
-    icon: "fa-solid fa-wand-sparkles",
+    icon: SPOTLIGHT_CONTROL_ICON,
     order: nextOrder,
     button: true,
     visible: true,
@@ -218,3 +183,4 @@ Hooks.on("getSceneControlButtons", (controls) => {
 
 Hooks.on("userConnected", () => controller?.onUserConnectionChanged());
 Hooks.on("updateUser", (user, changes) => controller?.onUserUpdated(user, changes));
+Hooks.on("deleteUser", () => controller?.onUserDeleted());

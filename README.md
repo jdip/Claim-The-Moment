@@ -6,6 +6,18 @@ This is an independent community project and is not affiliated with or endorsed 
 
 The GM throws the spotlight to the table, starting a synchronized countdown. The first eligible player to press **Claim the Spotlight** receives it. If nobody claims before time expires, the module selects an eligible online player with the fewest previous spotlight claims; ties are broken randomly.
 
+> **New to Claim the Moment?** Start with the [player and GM user guide](docs/USER_GUIDE.md) for opening the window, running the spotlight, fairness rules, personal audio, and troubleshooting. The same quick help is always available from the **?** button inside the module window.
+
+## See it in action
+
+![Animated walkthrough showing the GM open Claim the Moment, throw the spotlight, a player claim it, and the winner appear for everyone](docs/media/claim-the-moment-walkthrough.gif)
+
+### GM and player views
+
+![GM view showing Throw and Take controls, eligible and online readiness totals, contention toggles, claim totals, handoff controls, help, reset, and sound controls](docs/media/claim-the-moment-gm.png)
+
+![Player view during an open countdown showing Claim the Spotlight, eligible and online readiness totals, shared contention state, help, and sound controls](docs/media/claim-the-moment-player.png)
+
 ## Features
 
 - A shared window listing every currently online, non-GM player and their spotlight total.
@@ -25,10 +37,13 @@ The GM throws the spotlight to the table, starting a synchronized countdown. The
 - Independent on/off toggles and Foundry file pickers for replacing each sound.
 - A compact per-user volume control in the spotlight window which affects only Claim the Moment and persists in the world.
 - A Token Controls button for reopening the window at any time.
+- Editable Foundry keybindings: **Shift+M** opens the window and **Shift+C** claims an available spotlight by default.
+- Live online/eligible readiness totals with contextual guidance when a throw is unavailable.
+- Built-in **?** help plus a per-user welcome message that shows new users exactly where to find the window and can be disabled permanently.
 
 ## Compatibility
 
-This initial release targets and is verified against:
+This release targets and is verified against:
 
 - [Foundry VTT 14.364](https://foundryvtt.com/releases/14.364)
 - [Foundryborne Daggerheart 2.5.4](https://github.com/Foundryborne/daggerheart/releases/tag/2.5.4)
@@ -47,7 +62,9 @@ Enable **Claim the Moment** from **Manage Modules** in a Daggerheart world, then
 
 ## Using the module
 
-1. Open **Claim the Moment** from the wand-and-sparkles button under Token Controls.
+For the complete player and GM walkthrough, see the **[Claim the Moment User Guide](docs/USER_GUIDE.md)**.
+
+1. Open **Claim the Moment** from the **Claim the Moment** button under Token Controls.
 2. The GM checks which online players are in contention and adjusts totals if needed.
 3. The GM presses **Throw the Spotlight**, or **Take the Spotlight** to bring focus back immediately.
 4. Eligible players press **Claim the Spotlight** before time runs out.
@@ -66,6 +83,8 @@ The module exposes a small API for macros:
 ```js
 const api = game.modules.get("claim-the-moment").api;
 api.open();
+api.help();
+api.credits();
 await api.throwSpotlight(); // GM only
 await api.takeSpotlight(); // GM only
 await api.handSpotlight("PLAYER_USER_ID"); // GM only
@@ -79,17 +98,18 @@ The module uses browser-native ES modules and has no runtime or build dependenci
 ```bash
 npm test
 npm run check
+npm run verify
 npm run package
 ```
 
-The package command creates the two GitHub release assets expected by the manifest: `dist/module.json` and `dist/claim-the-moment.zip`.
+The verification command checks syntax, tests, manifest consistency, localization references, attributions, and packaged asset formats. The package command runs those checks before creating the two GitHub release assets expected by the manifest: `dist/module.json` and `dist/claim-the-moment.zip`.
 
-The pure state transitions are covered by Node's built-in test runner. Full socket and UI behavior should also be smoke-tested with at least one GM and two player browser sessions in Foundry.
+The pure state transitions and service failure paths are covered by Node's built-in test runner. Before release, run the documented [GM and two-player Foundry smoke-test matrix](docs/SMOKE_TEST.md).
+
+The README media is reproducible from [`tools/onboarding-media-preview.html`](tools/onboarding-media-preview.html), which uses the module's shipped stylesheet and current window structure. The listing-ready copy and matching asset references live in [`docs/FOUNDRY_LISTING.md`](docs/FOUNDRY_LISTING.md).
 
 ## License
 
 [MIT](LICENSE)
 
-The bundled audio is available under CC0 and CC BY 4.0 licenses. See [sounds/LICENSE.md](sounds/LICENSE.md) for source links, attribution, and adaptation details.
-
-The bundled GM icon is adapted from Lorc's CC BY 3.0 **Daemon skull**. See [assets/LICENSE.md](assets/LICENSE.md) for the source, attribution, license, and adaptation details.
+See [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the bundled artwork and audio sources, creators, licenses, and adaptation details. The same credits are available from **Credits & licenses** at the bottom of the module's Help window.

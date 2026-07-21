@@ -1,0 +1,29 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enforce coverage floors
+        run: npm run coverage
+      - name: Validate immutable dependency manifests
+        run: node tools/verify-release.mjs --online
+      - name: Verify and package
+        run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: claim-the-moment-${{ github.sha }}
+          path: |
+            dist/module.json
+            dist/claim-the-moment.zip

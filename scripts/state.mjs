@@ -1,7 +1,8 @@
-import { AWARD_REASON, ROUND_STATUS } from "./constants.mjs";
+import { AWARD_REASON, RECENT_REQUEST_LIMIT, ROUND_STATUS } from "./constants.mjs";
 
 const VALID_STATUSES = new Set(Object.values(ROUND_STATUS));
 const VALID_REASONS = new Set(Object.values(AWARD_REASON));
+export const STATE_SCHEMA_VERSION = 4;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -10,81 +11,188 @@ function isRecord(value) {
 function nonNegativeInteger(value, fallback = 0) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
-  return Math.max(0, Math.trunc(number));
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.trunc(number)));
 }
 
 function finiteNumberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
 
 function cleanString(value) {
-  return typeof value === "string" && value.length ? value : null;
+  if (typeof value !== "string") return null;
+  const cleaned = value.trim();
+  return cleaned.length ? cleaned : null;
 }
 
-export function createInitialState() {
+function idleRound() {
   return {
-    schemaVersion: 2,
-    revision: 0,
-    counts: {},
-    eligible: {},
-    round: {
-      id: null,
-      status: ROUND_STATUS.IDLE,
-      startedAt: null,
-      endsAt: null,
+    id: null,
+    status: ROUND_STATUS.IDLE,
+    startedAt: null,
+    endsAt: null,
+    winnerId: null,
+    winnerName: null,
+    reason: null,
+    awardedAt: null,
+    fallbackExcludedUserId: null
+  };
+}
+
+function normalizeRound(rawRound, lastPlayerWinnerId) {
+  if (!isRecord(rawRound)) return idleRound();
+
+  const status = VALID_STATUSES.has(rawRound.status) ? rawRound.status : ROUND_STATUS.IDLE;
+  if (status === ROUND_STATUS.IDLE) return idleRound();
+
+  const id = cleanString(rawRound.id);
+  const startedAt = finiteNumberOrNull(rawRound.startedAt);
+  const endsAt = finiteNumberOrNull(rawRound.endsAt);
+  const hasValidTimeline = startedAt !== null && endsAt !== null && endsAt > startedAt;
+  const hasNoTimeline = startedAt === null && endsAt === null;
+  const fallbackExcludedUserId = cleanString(rawRound.fallbackExcludedUserId)
+    ?? lastPlayerWinnerId;
+
+  if (status === ROUND_STATUS.OPEN) {
+    if (!id || !hasValidTimeline) return idleRound();
+    return {
+      id,
+      status,
+      startedAt,
+      endsAt,
       winnerId: null,
       winnerName: null,
       reason: null,
       awardedAt: null,
-      fallbackExcludedUserId: null
-    }
+      fallbackExcludedUserId
+    };
+  }
+
+  if (status === ROUND_STATUS.CANCELLED) {
+    if (!id || !hasValidTimeline) return idleRound();
+    return {
+      id,
+      status,
+      startedAt,
+      endsAt,
+      winnerId: null,
+      winnerName: null,
+      reason: null,
+      awardedAt: null,
+      fallbackExcludedUserId
+    };
+  }
+
+  const winnerId = cleanString(rawRound.winnerId);
+  const winnerName = cleanString(rawRound.winnerName);
+  const reason = VALID_REASONS.has(rawRound.reason) ? rawRound.reason : null;
+  const awardedAt = finiteNumberOrNull(rawRound.awardedAt);
+  if (!id || !winnerId || !winnerName || !reason || awardedAt === null) return idleRound();
+  const isDirectAward = reason === AWARD_REASON.GM || reason === AWARD_REASON.HANDOFF;
+  if ((isDirectAward && !hasNoTimeline) || (!isDirectAward && !hasValidTimeline)) return idleRound();
+  if (hasValidTimeline && awardedAt < startedAt) return idleRound();
+
+  return {
+    id,
+    status,
+    startedAt,
+    endsAt,
+    winnerId,
+    winnerName,
+    reason,
+    awardedAt,
+    fallbackExcludedUserId
+  };
+}
+
+export function createInitialState() {
+  return {
+    schemaVersion: STATE_SCHEMA_VERSION,
+    revision: 0,
+    counts: {},
+    eligible: {},
+    processedRequestIds: [],
+    lastPlayerWinnerId: null,
+    round: idleRound()
+  };
+}
+
+export function migrateState(value) {
+  if (!isRecord(value)) return createInitialState();
+  const sourceVersion = nonNegativeInteger(value.schemaVersion);
+  if (sourceVersion >= STATE_SCHEMA_VERSION) return value;
+
+  const rawRound = isRecord(value.round) ? value.round : {};
+  const awardedPlayerWinnerId = rawRound.status === ROUND_STATUS.AWARDED
+    && (rawRound.reason === AWARD_REASON.CLAIM
+      || rawRound.reason === AWARD_REASON.AUTOMATIC
+      || rawRound.reason === AWARD_REASON.HANDOFF)
+    ? cleanString(rawRound.winnerId)
+    : null;
+  const isLegacyDirectAward = sourceVersion <= 2
+    && rawRound.status === ROUND_STATUS.AWARDED
+    && (rawRound.reason === AWARD_REASON.GM || rawRound.reason === AWARD_REASON.HANDOFF)
+    && Number(rawRound.startedAt) === 0
+    && Number(rawRound.endsAt) === 0;
+
+  return {
+    ...value,
+    schemaVersion: STATE_SCHEMA_VERSION,
+    round: isLegacyDirectAward
+      ? { ...rawRound, startedAt: null, endsAt: null }
+      : rawRound,
+    lastPlayerWinnerId: cleanString(value.lastPlayerWinnerId)
+      ?? awardedPlayerWinnerId
+      ?? cleanString(rawRound.fallbackExcludedUserId)
   };
 }
 
 export function normalizeState(value) {
   const initial = createInitialState();
-  if (!isRecord(value)) return initial;
+  const migrated = migrateState(value);
+  if (!isRecord(migrated)) return initial;
 
   const counts = {};
-  if (isRecord(value.counts)) {
-    for (const [userId, count] of Object.entries(value.counts)) {
+  if (isRecord(migrated.counts)) {
+    for (const [userId, count] of Object.entries(migrated.counts)) {
       if (userId) counts[userId] = nonNegativeInteger(count);
     }
   }
 
   const eligible = {};
-  if (isRecord(value.eligible)) {
-    for (const [userId, included] of Object.entries(value.eligible)) {
+  if (isRecord(migrated.eligible)) {
+    for (const [userId, included] of Object.entries(migrated.eligible)) {
       if (userId) eligible[userId] = included !== false;
     }
   }
 
-  const rawRound = isRecord(value.round) ? value.round : {};
-  const status = VALID_STATUSES.has(rawRound.status) ? rawRound.status : ROUND_STATUS.IDLE;
-  const reason = VALID_REASONS.has(rawRound.reason) ? rawRound.reason : null;
+  const processedRequestIds = [];
+  if (Array.isArray(migrated.processedRequestIds)) {
+    for (const value of migrated.processedRequestIds) {
+      const requestId = cleanString(value);
+      if (!requestId) continue;
+      const duplicateIndex = processedRequestIds.indexOf(requestId);
+      if (duplicateIndex >= 0) processedRequestIds.splice(duplicateIndex, 1);
+      processedRequestIds.push(requestId);
+    }
+  }
+
+  const rawRound = isRecord(migrated.round) ? migrated.round : {};
+  const lastPlayerWinnerId = cleanString(migrated.lastPlayerWinnerId);
 
   return {
-    schemaVersion: 2,
-    revision: nonNegativeInteger(value.revision),
+    schemaVersion: STATE_SCHEMA_VERSION,
+    revision: nonNegativeInteger(migrated.revision),
     counts,
     eligible,
-    round: {
-      id: cleanString(rawRound.id),
-      status,
-      startedAt: finiteNumberOrNull(rawRound.startedAt),
-      endsAt: finiteNumberOrNull(rawRound.endsAt),
-      winnerId: cleanString(rawRound.winnerId),
-      winnerName: cleanString(rawRound.winnerName),
-      reason,
-      awardedAt: finiteNumberOrNull(rawRound.awardedAt),
-      fallbackExcludedUserId: cleanString(rawRound.fallbackExcludedUserId)
-    }
+    processedRequestIds: processedRequestIds.slice(-RECENT_REQUEST_LIMIT),
+    lastPlayerWinnerId,
+    round: normalizeRound(rawRound, lastPlayerWinnerId)
   };
 }
 
-function withRevision(state, changes) {
-  const current = normalizeState(state);
+function withRevision(current, changes) {
   return {
     ...current,
     ...changes,
@@ -98,6 +206,24 @@ export function getPlayerCount(state, userId) {
 
 export function isPlayerEligible(state, userId) {
   return normalizeState(state).eligible[userId] !== false;
+}
+
+export function hasProcessedRequest(state, requestId) {
+  const cleaned = cleanString(requestId);
+  return Boolean(cleaned && normalizeState(state).processedRequestIds.includes(cleaned));
+}
+
+export function recordProcessedRequest(state, requestId) {
+  const current = normalizeState(state);
+  const cleaned = cleanString(requestId);
+  if (!cleaned) return current;
+  return {
+    ...current,
+    processedRequestIds: [
+      ...current.processedRequestIds.filter((existing) => existing !== cleaned),
+      cleaned
+    ].slice(-RECENT_REQUEST_LIMIT)
+  };
 }
 
 export function setPlayerCount(state, userId, count) {
@@ -130,13 +256,7 @@ export function resetPlayerCounts(state, userIds = []) {
 export function startRound(state, { roundId, startedAt, durationMs }) {
   const current = normalizeState(state);
   const safeStartedAt = finiteNumberOrNull(startedAt) ?? Date.now();
-  const safeDuration = Math.max(0, finiteNumberOrNull(durationMs) ?? 0);
-  const priorPlayerWinner = current.round.status === ROUND_STATUS.AWARDED
-    && (current.round.reason === AWARD_REASON.CLAIM
-      || current.round.reason === AWARD_REASON.AUTOMATIC
-      || current.round.reason === AWARD_REASON.HANDOFF)
-    ? current.round.winnerId
-    : null;
+  const safeDuration = Math.max(1, finiteNumberOrNull(durationMs) ?? 1);
   return withRevision(current, {
     round: {
       id: String(roundId),
@@ -147,7 +267,7 @@ export function startRound(state, { roundId, startedAt, durationMs }) {
       winnerName: null,
       reason: null,
       awardedAt: null,
-      fallbackExcludedUserId: priorPlayerWinner
+      fallbackExcludedUserId: current.lastPlayerWinnerId
     }
   });
 }
@@ -156,14 +276,14 @@ export function awardSpotlight(state, { winnerId, winnerName, reason, awardedAt 
   const current = normalizeState(state);
   if (current.round.status !== ROUND_STATUS.OPEN) return current;
 
-  const safeReason = VALID_REASONS.has(reason) ? reason : AWARD_REASON.CLAIM;
+  const safeReason = reason === AWARD_REASON.AUTOMATIC ? reason : AWARD_REASON.CLAIM;
   const counts = {
     ...current.counts,
-    [winnerId]: getPlayerCount(current, winnerId) + 1
+    [winnerId]: nonNegativeInteger((current.counts[winnerId] ?? 0) + 1)
   };
-
   return withRevision(current, {
     counts,
+    lastPlayerWinnerId: String(winnerId),
     round: {
       ...current.round,
       status: ROUND_STATUS.AWARDED,
@@ -196,11 +316,12 @@ export function handSpotlight(state, { roundId, winnerId, winnerName, awardedAt 
   const current = normalizeState(state);
   const counts = {
     ...current.counts,
-    [winnerId]: getPlayerCount(current, winnerId) + 1
+    [winnerId]: nonNegativeInteger((current.counts[winnerId] ?? 0) + 1)
   };
 
   return withRevision(current, {
     counts,
+    lastPlayerWinnerId: String(winnerId),
     round: {
       id: String(roundId),
       status: ROUND_STATUS.AWARDED,
@@ -231,14 +352,46 @@ export function cancelRound(state) {
 }
 
 export function chooseFallbackWinner(state, candidateIds, random = Math.random) {
+  const current = normalizeState(state);
   const uniqueIds = [...new Set(candidateIds)].filter(Boolean).sort();
   if (!uniqueIds.length) return null;
 
   let minimum = Infinity;
-  for (const userId of uniqueIds) minimum = Math.min(minimum, getPlayerCount(state, userId));
+  for (const userId of uniqueIds) minimum = Math.min(minimum, current.counts[userId] ?? 0);
 
-  const tied = uniqueIds.filter((userId) => getPlayerCount(state, userId) === minimum);
+  const tied = uniqueIds.filter((userId) => (current.counts[userId] ?? 0) === minimum);
   const roll = Number(random());
   const normalizedRoll = Number.isFinite(roll) ? Math.min(Math.max(roll, 0), 0.999999999) : 0;
   return tied[Math.floor(normalizedRoll * tied.length)];
+}
+
+export function pruneUnknownPlayers(state, validPlayerIds = []) {
+  const current = normalizeState(state);
+  const validIds = new Set(validPlayerIds.filter(Boolean));
+  const counts = Object.fromEntries(Object.entries(current.counts)
+    .filter(([userId]) => validIds.has(userId)));
+  const eligible = Object.fromEntries(Object.entries(current.eligible)
+    .filter(([userId]) => validIds.has(userId)));
+  const lastPlayerWinnerId = validIds.has(current.lastPlayerWinnerId)
+    ? current.lastPlayerWinnerId
+    : null;
+  const fallbackExcludedUserId = validIds.has(current.round.fallbackExcludedUserId)
+    ? current.round.fallbackExcludedUserId
+    : lastPlayerWinnerId;
+
+  const unchanged = JSON.stringify(counts) === JSON.stringify(current.counts)
+    && JSON.stringify(eligible) === JSON.stringify(current.eligible)
+    && lastPlayerWinnerId === current.lastPlayerWinnerId
+    && fallbackExcludedUserId === current.round.fallbackExcludedUserId;
+  if (unchanged) return current;
+
+  return withRevision(current, {
+    counts,
+    eligible,
+    lastPlayerWinnerId,
+    round: {
+      ...current.round,
+      fallbackExcludedUserId
+    }
+  });
 }

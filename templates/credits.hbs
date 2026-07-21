@@ -1,0 +1,62 @@
+<article class="ctm-credits">
+  <header class="ctm-credits-intro">
+    <p class="ctm-eyebrow">{{localize "CTM.Credits.Eyebrow"}}</p>
+    <h1>{{localize "CTM.Credits.Heading"}}</h1>
+    <p>{{localize "CTM.Credits.Intro"}}</p>
+    <p class="ctm-credits-no-ai"><i class="fa-solid fa-pen-ruler" aria-hidden="true"></i>{{localize "CTM.Credits.NoAI"}}</p>
+  </header>
+
+  <section class="ctm-credits-section" aria-labelledby="ctm-credits-artwork-heading">
+    <h2 id="ctm-credits-artwork-heading">
+      <i class="fa-solid fa-image" aria-hidden="true"></i>
+      {{localize "CTM.Credits.Artwork"}}
+    </h2>
+    <div class="ctm-credit-list">
+      {{#each artworkCredits}}
+        <article class="ctm-credit-card">
+          <p class="ctm-credit-file">{{file}}</p>
+          <h3><a href="{{titleUrl}}" target="_blank" rel="noopener">{{title}}</a></h3>
+          <p class="ctm-credit-attribution">
+            {{localize "CTM.Credits.By"}}
+            <a href="{{creatorUrl}}" target="_blank" rel="noopener">{{creator}}</a>
+            {{localize "CTM.Credits.Via"}}
+            <a href="{{sourceUrl}}" target="_blank" rel="noopener">{{source}}</a>.
+            {{localize "CTM.Credits.LicensedUnder"}}
+            <a href="{{licenseUrl}}" target="_blank" rel="noopener">{{license}}</a>.
+          </p>
+          <p class="ctm-credit-note">{{localize noteKey}}</p>
+        </article>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="ctm-credits-section" aria-labelledby="ctm-credits-sounds-heading">
+    <h2 id="ctm-credits-sounds-heading">
+      <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+      {{localize "CTM.Credits.Sounds"}}
+    </h2>
+    <div class="ctm-credit-list">
+      {{#each soundCredits}}
+        <article class="ctm-credit-card">
+          <p class="ctm-credit-file">{{localize roleKey}} · {{file}}</p>
+          <h3><a href="{{titleUrl}}" target="_blank" rel="noopener">{{title}}</a></h3>
+          <p class="ctm-credit-attribution">
+            {{localize "CTM.Credits.By"}}
+            <a href="{{creatorUrl}}" target="_blank" rel="noopener">{{creator}}</a>
+            {{localize "CTM.Credits.Via"}}
+            <a href="{{sourceUrl}}" target="_blank" rel="noopener">{{source}}</a>.
+            {{localize "CTM.Credits.LicensedUnder"}}
+            <a href="{{licenseUrl}}" target="_blank" rel="noopener">{{license}}</a>.
+          </p>
+          <p class="ctm-credit-note">{{localize noteKey}}</p>
+        </article>
+      {{/each}}
+    </div>
+  </section>
+
+  <footer class="ctm-credits-footer">
+    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+    <span>{{localize "CTM.Credits.Packaged"}}</span>
+    <a href="{{attributionsUrl}}" target="_blank" rel="noopener">{{localize "CTM.Credits.ReadDocument"}}</a>
+  </footer>
+</article>
